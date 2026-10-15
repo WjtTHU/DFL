@@ -180,8 +180,10 @@ class LotwiseIdxRegDataset(Dataset):
                 for indices in windows:
                     pred_time = df.loc[indices]["created_at"].max()
                     target = (completion_time - pred_time).total_seconds() / (24 * 3600)
-                    self.max_target = max(self.max_target, target)
-                    self.min_target = min(self.min_target, target)
+                    # Validation must reuse the training scale, even for out-of-range labels.
+                    if self.fit_scaler:
+                        self.max_target = max(self.max_target, target)
+                        self.min_target = min(self.min_target, target)
                     sample = {"lot_id": lot_id, "row_indices": indices, "RCT_in_days": target}
                     self.samples.append(sample)
                     self.lot_ids.add(lot_id)

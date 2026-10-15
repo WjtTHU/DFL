@@ -44,4 +44,14 @@ def get_dataset(df: DataFrame, config: dict, predict_mode: bool = False, **kwarg
             f"Dataset type {config['dataset']['type']} is not supported yet. Supported types: `fabwise` and `lotwise`."
         )
 
+    target_scaler = kwargs.get("target_scaler")
+    if target_scaler is not None:
+        actual_scaler = (dataset.min_target, dataset.max_target)
+        if actual_scaler != tuple(target_scaler):
+            raise ValueError(
+                f"Dataset changed the supplied target scaler: "
+                f"expected {tuple(target_scaler)}, got {actual_scaler}. "
+                "Validation and prediction must reuse the training target scaler."
+            )
+
     return dataset

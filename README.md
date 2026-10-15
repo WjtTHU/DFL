@@ -2,11 +2,17 @@
 
 本地使用方法和路径索引见 [本地路径说明](doc/local_paths.txt)。统一入口为 `python run.py check`，数据路径配置位于 `config/local_paths.json`。
 
+版本的主要变动与回溯提交号见 [版本迭代记录](doc/version_history.md)。“原版”固定指首次本地 CSV 基线 `abfce8f`。
+
 代码仓库：https://github.com/WjtTHU/DFL 。仓库根目录为 `local_wip`。代码、配置、依赖锁定文件和文档纳入版本管理；CSV、原始压缩包、模型权重和运行输出保留在仓库外或由 `.gitignore` 排除。
 
 日常修改先保留在工作区，收到提交指令后再创建 commit 并推送到 GitHub。重要版本可增加 tag，注明数据版本及验证情况。历史代码可通过 commit 或 tag 检出到独立分支；恢复已发布版本时优先使用 revert，以保留完整历史。未提交的修改，以及未纳入 Git 的数据和模型，不在代码版本历史中。
 
-当前基线基于企业 v0.9.5 发布包及补充的 CSV 入口和配置。已通过路径和 Python 语法检查，尚未完成端到端训练与推理验证。`config/data_sources.json` 记录本版三份 CSV 的大小和 SHA-256；实际文件需另外提供，并在 `config/local_paths.json` 中配置位置。
+初始提交 `abfce8f` 基于企业 v0.9.5 发布包及补充的 CSV 入口和配置。首次 DK 全量基线在第 38 轮早停，原日志选出的最佳模型为第 8 轮；按原始天数标签计算的验证 MAE 为 2.1949 天。原实现的验证标签缩放与训练范围不一致，日志中的 1.3658 不能直接解释为原始天数误差。原基线模型和[历史报告](outputs/dk/full_runs/20261015_174056/experiment_report.html)保留。
+
+2026-10-15 已完成标签缩放修正及同配置全量重跑：第 42 轮早停，最佳模型为第 12 轮，耗时约 101.9 分钟。重载核验的验证 MAE 为 **2.0424 天**，RMSE 为 **4.9016 天**；MAE 比原版降低 6.9%，比训练商品平均周期基线降低 27.3%。训练和验证均固定使用 1–62 天的缩放范围，原始验证标签最高 108 天，未裁剪。5 项回归测试通过，两次数据、源配置与验证窗口一致。见[修正实验报告](outputs/dk/full_runs/20261015_195345_scaler_fix/experiment_report.html)及[本地运行说明](doc/local_run.md)。结果来自用于选模的验证集，尚非独立测试或严格时间回测；完工标签沿用企业快照规则。固定日末预测、整数日标签和 NLL 分布预测仍待实施。运行输出仅保留本地，修正代码尚未提交。
+
+`config/data_sources.json` 记录本版三份 CSV 的大小和 SHA-256；实际文件需另外提供，并在 `config/local_paths.json` 中配置位置。
 
 CSV 入口不需要数据库。若使用原包的 PostgreSQL/API 功能，请将 `config/postgres.example.yaml` 复制为 `config/postgres.yaml` 并填写本地连接信息；含连接口令的实际配置不纳入 Git。
 
