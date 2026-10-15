@@ -1,0 +1,97 @@
+{# Stage Duration (Cycle Time) Analysis Query Template #}
+WITH lot_parent_map AS (
+    SELECT
+        p.{{ columns.product_id }} AS product_id,
+        p.{{ columns.lot_id }} AS lot_id,
+        p.{{ columns.parent_lot_id }} AS parent_lot_id,
+        ROW_NUMBER() OVER(
+            PARTITION BY p.{{ columns.product_id }}, p.{{ columns.lot_id }}
+            ORDER BY p.{{ columns.created_at }} ASC
+        ) as rn
+    FROM {{ tables.snapshot_table }} p
+    WHERE p.{{ columns.parent_lot_id }} IS NOT NULL
+
+        {% if product_id %}
+        AND p.{{ columns.product_id }} = {{ product_id|sql }}
+        {% endif %}
+
+        {% if lot_id %}
+        AND p.{{ columns.lot_id }} = {{ lot_id|sql }}
+        {% endif %}
+),
+
+valid_parent_lots AS (
+    SELECT
+        product_id,
+        lot_id
+    FROM lot_parent_map
+    WHERE rn = 1
+      AND parent_lot_id = lot_id
+),
+
+latest_lot_progress AS (
+    SELECT
+        lp.{{ columns.product_id }} AS product_id,
+        lp.{{ columns.lot_id }} AS lot_id,
+        lp.{{ columns.stage_name }} AS stage_name,
+        lp.{{ columns.stage_type }} AS stage_type,
+        lp.{{ columns.stage_time }} AS stage_time,
+        ROW_NUMBER() OVER(
+            PARTITION BY lp.{{ columns.lot_id }}, lp.{{ columns.stage_name }} 
+            ORDER BY lp.{{ columns.snapshot_cut }} DESC
+        ) as rn
+    FROM {{ tables.lot_progress_table }} lp
+    JOIN valid_parent_lots vpl
+      ON vpl.product_id = lp.{{ columns.product_id }}
+      AND vpl.lot_id = lp.{{ columns.lot_id }}
+    WHERE lp.{{ columns.stage_type }} != 'predicted'
+
+        {% if product_id %}
+        AND lp.{{ columns.product_id }} = {{ product_id|sql }}
+        {% endif %}
+
+        {% if lot_id %}
+        AND lp.{{ columns.lot_id }} = {{ lot_id|sql }}
+        {% endif %}
+
+        {% if cut_time %}
+        AND lp.{{ columns.snapshot_cut }} <= {{ cut_time|sql }}
+        {% endif %}
+
+),
+
+stage_start_end AS (
+    SELECT
+        product_id,
+        lot_id,
+        stage_name,
+        stage_type,
+        stage_time AS start_time,
+        LEAD(stage_time) OVER (
+            PARTITION BY lot_id 
+            ORDER BY stage_time
+        ) AS end_time
+    FROM latest_lot_progress
+    WHERE rn = 1
+)
+
+SELECT
+    product_id,
+    lot_id,
+    stage_name,
+    stage_type,
+    start_time,
+    end_time,
+    EXTRACT(EPOCH FROM (end_time - start_time)) AS duration_seconds
+FROM stage_start_end
+WHERE 
+    end_time IS NOT NULL
+    
+    {% if stage_name %}
+    AND stage_name = {{ stage_name|sql }}
+    {% endif %}
+
+ORDER BY 
+    product_id, 
+    lot_id, 
+    start_time;

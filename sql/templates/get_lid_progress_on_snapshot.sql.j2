@@ -1,0 +1,26 @@
+{# Template for fetching cached lot progress #}
+SELECT
+  {{ columns.stage_name }},
+  {{ columns.stage_time }},
+  {{ columns.stage_type }},
+  {{ columns.stage_end }},
+  {{ columns.product_id }},
+  {{ columns.snapshot_cut }},
+  {{ columns.path_id }}
+FROM {{ tables.lot_progress_table }}
+WHERE {{ columns.lot_id }} = {{ lot_id|sql }}
+
+  {% if snapshot_cut %}
+  {% set op = snapshot_cut_op or "=" %}
+  AND {{ columns.snapshot_cut }} {{ op }} {{ snapshot_cut|sql }}
+  {% endif %}
+
+  {% if snapshot_start %}
+  AND {{ columns.snapshot_cut }} >= {{ snapshot_start|sql }}
+  {% endif %}
+
+  {% if snapshot_end %}
+  AND {{ columns.snapshot_cut }} <= {{ snapshot_end|sql }}
+  {% endif %}
+
+ORDER BY {{ columns.snapshot_cut }} ASC, {{ columns.stage_time }} ASC

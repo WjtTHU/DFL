@@ -1,0 +1,8 @@
+{# Lots for a set of products #}
+SELECT DISTINCT {{ columns.lot_id }} AS lot_id
+FROM {{ tables.snapshot_table }}
+WHERE {{ columns.product_id }} IN {{ product_ids|sql }}
+  AND {{ columns.lot_id }} IS NOT NULL
+  AND {{ columns.lot_id }} = {{ columns.parent_lot_id }}
+  AND {{ columns.stage }} IS NOT NULL
+ORDER BY {{ columns.lot_id }}

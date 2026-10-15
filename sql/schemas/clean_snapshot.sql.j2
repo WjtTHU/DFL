@@ -1,0 +1,62 @@
+SET LOCAL work_mem = '512MB';
+SET LOCAL maintenance_work_mem = '2047MB';
+SET LOCAL max_parallel_workers_per_gather = 8;
+SET LOCAL max_parallel_maintenance_workers = 8;
+
+DROP MATERIALIZED VIEW IF EXISTS {{ tables.snapshot_table }} CASCADE;
+
+CREATE MATERIALIZED VIEW {{ tables.snapshot_table }} AS
+WITH lot_summary AS MATERIALIZED (
+    SELECT
+        {{ columns.lot_id }} AS lot_id,
+        MIN({{ columns.created_at }}) FILTER (
+            WHERE {{ columns.product_id }} IS NOT NULL
+              AND {{ columns.created_at }} IS NOT NULL
+        ) AS oldest_created_at,
+        MIN({{ columns.created_at }}) FILTER (
+            WHERE LOWER({{ columns.stage }}) IN ('qc1-pack', 'inventory', 'pa2-photo', 'pad-photo')
+        ) AS final_step_date,
+        MIN({{ columns.stage }}) AS min_stage,
+        MAX({{ columns.stage }}) AS max_stage
+    FROM {{ tables.raw_table }}
+    WHERE {{ columns.lot_id }} IS NOT NULL
+    GROUP BY {{ columns.lot_id }}
+),
+oldest_product AS (
+    SELECT
+        ls.lot_id,
+        ls.final_step_date,
+        MIN(r.{{ columns.product_id }}) AS product_id
+    FROM lot_summary AS ls
+    JOIN {{ tables.raw_table }} AS r
+      ON r.{{ columns.lot_id }} = ls.lot_id
+     AND r.{{ columns.created_at }} = ls.oldest_created_at
+    WHERE ls.min_stage IS DISTINCT FROM ls.max_stage
+      AND r.{{ columns.product_id }} IS NOT NULL
+    GROUP BY
+        ls.lot_id,
+        ls.final_step_date
+)
+SELECT h.*
+FROM {{ tables.raw_table }} AS h
+JOIN oldest_product AS op
+  ON h.{{ columns.lot_id }} = op.lot_id
+ AND h.{{ columns.product_id }} = op.product_id
+WHERE
+    (op.final_step_date IS NULL OR h.{{ columns.created_at }} <= op.final_step_date)
+    AND h.{{ columns.product_id }} IS NOT NULL
+    AND h.{{ columns.lot_id }} IS NOT NULL
+    AND h.{{ columns.parent_lot_id }} IS NOT NULL
+    AND h.{{ columns.lot_status }} IS NOT NULL
+    AND h.{{ columns.stage }} IS NOT NULL
+    AND h.{{ columns.current_wafer_qty }} IS NOT NULL
+    AND h.{{ columns.created_at }} IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_mv_{{ tables.snapshot_table }}_lot_created_at
+  ON {{ tables.snapshot_table }} ({{ columns.lot_id }}, {{ columns.created_at }});
+CREATE INDEX IF NOT EXISTS idx_mv_{{ tables.snapshot_table }}_product_created_lot
+  ON {{ tables.snapshot_table }} ({{ columns.product_id }}, {{ columns.created_at }}, {{ columns.lot_id }});
+CREATE INDEX IF NOT EXISTS idx_mv_{{ tables.snapshot_table }}_lower_stage
+  ON {{ tables.snapshot_table }} (LOWER({{ columns.stage }}));
+CREATE UNIQUE INDEX IF NOT EXISTS uidx_mv_{{ tables.snapshot_table }}_pk
+  ON {{ tables.snapshot_table }} ({{ columns.lot_id }}, {{ columns.created_at }});

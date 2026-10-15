@@ -1,0 +1,18 @@
+{# Distinct snapshot cuts from lot_progress_table for readiness checks #}
+SELECT DISTINCT
+    lp.{{ columns.snapshot_cut }} AS snapshot_time
+FROM {{ tables.lot_progress_table }} lp
+WHERE 1=1
+    {% if product_id %}
+    AND lp.{{ columns.product_id }} = {{ product_id|sql }}
+    {% endif %}
+    {% if lot_id %}
+    AND lp.{{ columns.lot_id }} = {{ lot_id|sql }}
+    {% endif %}
+    {% if snapshot_start %}
+    AND lp.{{ columns.snapshot_cut }} >= {{ snapshot_start|sql }}
+    {% endif %}
+    {% if snapshot_end %}
+    AND lp.{{ columns.snapshot_cut }} <= {{ snapshot_end|sql }}
+    {% endif %}
+ORDER BY snapshot_time

@@ -1,0 +1,49 @@
+{# Required latest low-HWM lot_progress rows for a query scope.
+   For each lot in the product/scope, require the latest raw snapshot at or before
+   the target cutoff to exist in lot_progress_table. If snapshot_end is omitted,
+   this naturally resolves to each lot's latest available raw snapshot.
+#}
+WITH required_cuts AS (
+  SELECT
+    s.{{ columns.lot_id }} AS lot_id,
+    s.{{ columns.product_id }} AS product_id,
+    MAX(s.{{ columns.created_at }}) AS snapshot_cut
+  FROM {{ tables.snapshot_table }} s
+  WHERE s.{{ columns.stage }} IS NOT NULL
+    AND s.{{ columns.lot_id }} = s.{{ columns.parent_lot_id }}
+    {% if product_id %}
+    AND s.{{ columns.product_id }} = {{ product_id|sql }}
+    {% endif %}
+    {% if lot_id %}
+    AND s.{{ columns.lot_id }} = {{ lot_id|sql }}
+    {% endif %}
+    {% if snapshot_end %}
+    AND s.{{ columns.created_at }} <= {{ snapshot_end|sql }}
+    {% endif %}
+  GROUP BY
+    s.{{ columns.lot_id }},
+    s.{{ columns.product_id }}
+),
+ready_progress AS (
+  SELECT DISTINCT
+    lp.{{ columns.lot_id }} AS lot_id,
+    lp.{{ columns.snapshot_cut }} AS snapshot_cut
+  FROM {{ tables.lot_progress_table }} lp
+  WHERE 1=1
+    {% if product_id %}
+    AND lp.{{ columns.product_id }} = {{ product_id|sql }}
+    {% endif %}
+    {% if lot_id %}
+    AND lp.{{ columns.lot_id }} = {{ lot_id|sql }}
+    {% endif %}
+)
+SELECT
+  rc.product_id,
+  rc.lot_id,
+  rc.snapshot_cut,
+  (rp.lot_id IS NOT NULL) AS is_ready
+FROM required_cuts rc
+LEFT JOIN ready_progress rp
+  ON rp.lot_id = rc.lot_id
+ AND rp.snapshot_cut = rc.snapshot_cut
+ORDER BY rc.lot_id, rc.snapshot_cut

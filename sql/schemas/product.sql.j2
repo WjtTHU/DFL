@@ -1,0 +1,11 @@
+{# Product table schema template #}
+CREATE TABLE IF NOT EXISTS {{ tables.products_table }} (
+    {{ columns.product_id }} VARCHAR(255) NOT NULL, -- for a general path across all pids, use pid = 'ALL'
+    {{ columns.path_start_time }} TIMESTAMP NOT NULL,
+    {{ columns.path_end_time }} TIMESTAMP NOT NULL,
+    {{ columns.min_completion_time }} DOUBLE PRECISION,
+    {{ columns.primary_path }} TEXT [],
+    {{ columns.primary_path_durations }} DOUBLE PRECISION [],
+    {{ columns.calculation_time }} TIMESTAMP DEFAULT NOW(),
+    PRIMARY KEY ({{ columns.product_id }}, {{ columns.path_start_time }}, {{ columns.path_end_time }})
+);

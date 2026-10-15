@@ -1,0 +1,133 @@
+{# Final and per-stage output counts for lots finishing on requested target dates.
+   Stage outputs are intentionally limited to lots with final output on that target date.
+#}
+WITH target_days AS (
+  SELECT target_day::date
+  FROM (VALUES
+    {% for target_day in target_days %}
+    ({{ target_day|sql }}::date){% if not loop.last %},{% endif %}
+    {% endfor %}
+  ) AS v(target_day)
+),
+latest_cut AS (
+  SELECT
+    s.{{ columns.lot_id }} AS lot_id,
+    s.{{ columns.product_id }} AS product_id,
+    td.target_day,
+    MAX(s.{{ columns.created_at }}) AS snapshot_cut
+  FROM target_days td
+  JOIN {{ tables.snapshot_table }} s
+    ON s.{{ columns.product_id }} = {{ product_id|sql }}
+   AND s.{{ columns.stage }} IS NOT NULL
+   AND s.{{ columns.lot_id }} = s.{{ columns.parent_lot_id }}
+   AND s.{{ columns.created_at }} < (td.target_day + interval '1 day')
+  GROUP BY
+    s.{{ columns.lot_id }},
+    s.{{ columns.product_id }},
+    td.target_day
+),
+finish_lots AS (
+  SELECT
+    lc.target_day,
+    p.{{ columns.lot_id }} AS lot_id,
+    lc.snapshot_cut,
+    p.{{ columns.predicted_completion_time }} AS finish_time
+  FROM {{ tables.lot_completion_predictions_table }} p
+  JOIN latest_cut lc
+    ON p.{{ columns.lot_id }} = lc.lot_id
+   AND p.{{ columns.snapshot_cut }} = lc.snapshot_cut
+  WHERE p.{{ columns.product_id }} = {{ product_id|sql }}
+    AND p.{{ columns.predicted_completion_time }} >= lc.target_day
+    AND p.{{ columns.predicted_completion_time }} < (lc.target_day + interval '1 day')
+),
+finish_lots_with_wafers AS (
+  SELECT
+    fl.target_day,
+    fl.lot_id,
+    fl.snapshot_cut,
+    COALESCE(w.current_wafer_qty, 0)::bigint AS wafer_count
+  FROM finish_lots fl
+  LEFT JOIN LATERAL (
+    SELECT s.{{ columns.current_wafer_qty }} AS current_wafer_qty
+    FROM {{ tables.snapshot_table }} s
+    WHERE s.{{ columns.product_id }} = {{ product_id|sql }}
+      AND s.{{ columns.lot_id }} = fl.lot_id
+      AND s.{{ columns.lot_id }} = s.{{ columns.parent_lot_id }}
+      AND s.{{ columns.current_wafer_qty }} IS NOT NULL
+      AND s.{{ columns.created_at }} < (fl.target_day + interval '1 day')
+    ORDER BY s.{{ columns.created_at }} DESC
+    LIMIT 1
+  ) w ON TRUE
+),
+progress_rows AS (
+  SELECT
+    fl.target_day,
+    fl.lot_id,
+    fl.snapshot_cut,
+    fl.wafer_count,
+    lp.{{ columns.stage_name }} AS stage_name,
+    lp.{{ columns.stage_time }} AS stage_time,
+    CASE
+      WHEN lp.{{ columns.stage_type }} IN ('actual', 'interpolated') THEN 'actual'
+      ELSE 'predicted'
+    END AS output_type,
+    ROW_NUMBER() OVER (
+      PARTITION BY fl.target_day, fl.lot_id, fl.snapshot_cut
+      ORDER BY lp.{{ columns.stage_time }} DESC, lp.{{ columns.stage_name }} DESC
+    ) AS reverse_stage_rank
+  FROM finish_lots_with_wafers fl
+  JOIN {{ tables.lot_progress_table }} lp
+    ON lp.{{ columns.product_id }} = {{ product_id|sql }}
+   AND lp.{{ columns.lot_id }} = fl.lot_id
+   AND lp.{{ columns.snapshot_cut }} = fl.snapshot_cut
+),
+final_outputs AS (
+  SELECT
+    target_day,
+    output_type,
+    COUNT(DISTINCT lot_id)::bigint AS lot_count,
+    COALESCE(SUM(wafer_count), 0)::bigint AS wafer_count
+  FROM progress_rows
+  WHERE reverse_stage_rank = 1
+  GROUP BY target_day, output_type
+),
+stage_lot_outputs AS (
+  SELECT DISTINCT
+    target_day,
+    lot_id,
+    stage_name,
+    output_type,
+    wafer_count
+  FROM progress_rows
+),
+stage_outputs AS (
+  SELECT
+    target_day,
+    stage_name,
+    output_type,
+    COUNT(DISTINCT lot_id)::bigint AS lot_count,
+    COALESCE(SUM(wafer_count), 0)::bigint AS wafer_count
+  FROM stage_lot_outputs
+  GROUP BY target_day, stage_name, output_type
+)
+SELECT
+  'final'::text AS output_scope,
+  target_day,
+  NULL::text AS stage_name,
+  output_type,
+  lot_count,
+  wafer_count
+FROM final_outputs
+
+UNION ALL
+
+SELECT
+  'stage'::text AS output_scope,
+  target_day,
+  stage_name,
+  output_type,
+  lot_count,
+  wafer_count
+FROM stage_outputs
+
+ORDER BY target_day, output_scope, stage_name NULLS FIRST, output_type

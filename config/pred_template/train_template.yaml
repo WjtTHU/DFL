@@ -1,0 +1,35 @@
+data:
+  margin_in_days: 3.0
+  range:
+    snapshot_start: "2024-01-17"
+    snapshot_end: "2025-01-01"
+  cuts:
+    train_end: "2024-08-31"
+    val_end: "2024-10-31"
+
+training:
+  batch_size: 128
+  epochs: 80
+  seed: 42
+  save_dir: "checkpoints"
+  log_dir: "experiments"
+
+loss:
+  type: "SmoothL1Loss"
+
+optimizer:
+  type: "AdamW"
+  params:
+    lr: 0.0001
+    weight_decay: 0.00015
+
+scheduler:
+  type: "CosineAnnealingLR"
+  warmup_epoch: 10
+  params:
+    T_max: 70
+
+early_stopping:
+  monitor: "val_MAE"
+  patience: 30
+  min_delta: 0

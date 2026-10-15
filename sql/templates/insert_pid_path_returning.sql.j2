@@ -1,0 +1,58 @@
+{# Insert one cached primary/secondary path and return its path_id.
+   Existing rows are resolved in the same statement without a second application query.
+#}
+WITH input_row AS (
+  SELECT
+    %s::varchar AS {{ columns.product_id }},
+    %s::text[] AS {{ columns.path }},
+    %s::integer AS {{ columns.lot_count }},
+    %s::integer AS {{ columns.wafer_qty }},
+    %s::jsonb AS {{ columns.time_stats }},
+    %s::boolean AS {{ columns.is_primary_path }},
+    %s::varchar AS {{ columns.clustering_method }},
+    %s::jsonb AS {{ columns.clustering_params }},
+    %s::timestamp AS {{ columns.start_time }},
+    %s::timestamp AS {{ columns.end_time }}
+),
+inserted AS (
+  INSERT INTO {{ tables.path_table }} (
+      {{ columns.product_id }},
+      {{ columns.path }},
+      {{ columns.lot_count }},
+      {{ columns.wafer_qty }},
+      {{ columns.time_stats }},
+      {{ columns.is_primary_path }},
+      {{ columns.clustering_method }},
+      {{ columns.clustering_params }},
+      {{ columns.start_time }},
+      {{ columns.end_time }}
+  )
+  SELECT
+      {{ columns.product_id }},
+      {{ columns.path }},
+      {{ columns.lot_count }},
+      {{ columns.wafer_qty }},
+      {{ columns.time_stats }},
+      {{ columns.is_primary_path }},
+      {{ columns.clustering_method }},
+      {{ columns.clustering_params }},
+      {{ columns.start_time }},
+      {{ columns.end_time }}
+  FROM input_row
+  ON CONFLICT DO NOTHING
+  RETURNING {{ columns.path_id }}
+)
+SELECT {{ columns.path_id }} FROM inserted
+UNION ALL
+SELECT p.{{ columns.path_id }}
+FROM {{ tables.path_table }} p
+JOIN input_row i
+  ON p.{{ columns.product_id }} = i.{{ columns.product_id }}
+ AND p.{{ columns.path }} = i.{{ columns.path }}
+ AND p.{{ columns.start_time }} = i.{{ columns.start_time }}
+ AND p.{{ columns.end_time }} = i.{{ columns.end_time }}
+ AND p.{{ columns.clustering_method }} = i.{{ columns.clustering_method }}
+ AND p.{{ columns.clustering_params }} = i.{{ columns.clustering_params }}
+ AND p.{{ columns.is_primary_path }} = i.{{ columns.is_primary_path }}
+WHERE NOT EXISTS (SELECT 1 FROM inserted)
+LIMIT 1

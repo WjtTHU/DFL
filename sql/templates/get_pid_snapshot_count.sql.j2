@@ -1,0 +1,20 @@
+{# Count distinct snapshot observations (created_at) for one product up to snapshot_end, capped at
+   max_distinct. Capping (LIMIT) lets the hot path stop after finding enough distinct snapshots via
+   an index scan instead of scanning the product's full history. Used by the lot-level
+   "insufficient history" early-out.
+   NOTE: counts distinct created_at TIMESTAMPS, not calendar days -- a single day carrying several
+   snapshots contributes each one (two same-day observations can still yield a solvable transition). #}
+SELECT COUNT(*) AS snapshot_count
+FROM (
+    SELECT DISTINCT {{ columns.created_at }} AS snapshot_time
+    FROM {{ tables.snapshot_table }}
+    WHERE {{ columns.stage }} IS NOT NULL
+      AND {{ columns.product_id }} = {{ product_id|sql }}
+      {% if snapshot_end is defined and snapshot_end is not none %}
+      AND {{ columns.created_at }} <= {{ snapshot_end|sql }}
+      {% endif %}
+    {% if max_distinct is defined and max_distinct is not none %}
+    LIMIT {{ max_distinct }}
+    {% endif %}
+) AS distinct_snapshots
+;

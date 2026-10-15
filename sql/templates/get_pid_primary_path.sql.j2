@@ -1,0 +1,25 @@
+{# Template for fetching primary path from database #}
+SELECT
+    {{ columns.path_start_time }},
+    {{ columns.path_end_time }},
+    {{ columns.primary_path }},
+    {{ columns.primary_path_durations }},
+    {{ columns.min_completion_time }}
+FROM {{ tables.products_table }}
+WHERE {{ columns.product_id }} = {{ product_id|sql }}
+
+    {% if path_start_time and path_end_time %}
+    AND {{ columns.path_start_time }} <= {{ path_end_time|sql }}
+    {% elif path_start_time %}
+    AND {{ columns.path_start_time }} <= {{ path_start_time|sql }}
+    {% endif %}
+
+    {% if path_end_time %}
+    AND {{ columns.path_end_time }} <= {{ path_end_time|sql }}
+    {% endif %}
+    {% if path_start_time or path_end_time %}
+    AND {{ columns.path_start_time }} IS NOT NULL
+    AND {{ columns.path_end_time }} IS NOT NULL
+    {% endif %}
+ORDER BY
+    {% include "_product_path_order.sql.j2" %} LIMIT 1

@@ -1,0 +1,56 @@
+# DK Production Environment Configuration
+# Extends base sql_config.yaml for DK database environment
+
+database:
+  tables:
+    main_table: "dk"
+    products_table: "dk_products"  # Would need to be created for DK env
+    lot_progress_table: "dk_lot_progress"  # Would need to be created for DK env
+    lot_completion_predictions_table: "dk_lot_complete_pred"
+    path_table: "dk_paths"  # Would need to be created for DK env
+    raw_table: "dk"
+
+  columns:
+    # DK uses different column names and casing
+    lot_id: '"LotId"'  # Quoted because of mixed case
+    product_id: '"woItem"'
+    parent_lot_id: '"parentLotId"'
+    created_at: "CREATED_AT"  # Uppercase in DK
+    stage: "concat(STAGE, '.', OPER)"  # Composite stage in DK
+    lot_status: '"tranCode"'
+    current_wafer_qty: '"waferQty"'
+
+    # Product table
+    primary_path: "primary_path"
+    min_completion_time: "min_completion_time"
+    primary_path_durations: "primary_path_durations"
+    path_start_time: "path_start_time"
+    path_end_time: "path_end_time"
+    calculation_time: "calculation_time"
+
+    # Path table
+    path_id: "path_id"
+    path: "path"
+    lot_count: "lot_count"
+    wafer_qty: "wafer_qty"
+    time_stats: "time_stats"
+    is_primary_path: "is_primary_path"
+    clustering_method: "clustering_method"
+    clustering_params: "clustering_params"
+    start_time: "start_time"
+    end_time: "end_time"
+
+    # Lot Progress table
+    snapshot_cut: "snapshot_cut"
+    stage_name: "stage_name"
+    stage_time: "stage_time"
+    stage_type: "stage_type"
+    stage_end: "stage_end"
+    duration_seconds: "duration_seconds"
+    last_updated_at: "last_updated_at"
+    prediction_split_time: "prediction_split_time"
+    remaining_days: "remaining_days"
+    predicted_completion_time: "predicted_completion_time"
+    model_dir: "model_dir"
+
+  environment: "dk_production"

@@ -1,0 +1,4 @@
+{# Distinct product IDs present in snapshots #}
+SELECT DISTINCT {{ columns.product_id }} AS product_id
+FROM {{ tables.snapshot_table }}
+WHERE {{ columns.product_id }} IS NOT NULL

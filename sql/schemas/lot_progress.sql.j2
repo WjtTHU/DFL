@@ -1,0 +1,42 @@
+{# Lot calculation/progress table schema template #}
+CREATE TABLE IF NOT EXISTS {{ tables.lot_progress_table }} (
+    {{ columns.lot_id }} VARCHAR(255) NOT NULL,
+    {{ columns.product_id }} VARCHAR(255) NOT NULL,
+    {{ columns.snapshot_cut }} TIMESTAMP NOT NULL, -- Snapshot history <= this time can be used
+
+    {{ columns.stage_name }} VARCHAR(255) NOT NULL,
+    {{ columns.stage_time }} TIMESTAMP NOT NULL,
+    {{ columns.stage_type }} VARCHAR(255),
+
+    {{ columns.stage_end }} TIMESTAMP,
+    {{ columns.duration_seconds }} DOUBLE PRECISION,
+    {{ columns.path_id }} BIGINT NULL,
+
+    {{ columns.last_updated_at }} TIMESTAMP DEFAULT NOW(),
+
+    PRIMARY KEY ({{ columns.lot_id }}, {{ columns.snapshot_cut }}, {{ columns.stage_name }})
+);
+
+CREATE INDEX IF NOT EXISTS idx_{{ tables.lot_progress_table }}_product_id
+    ON {{ tables.lot_progress_table }} ({{ columns.product_id }});
+
+CREATE INDEX IF NOT EXISTS idx_{{ tables.lot_progress_table }}_stage_name
+    ON {{ tables.lot_progress_table }} ({{ columns.stage_name }});
+
+CREATE INDEX IF NOT EXISTS idx_{{ tables.lot_progress_table }}_stage_time
+    ON {{ tables.lot_progress_table }} ({{ columns.stage_time }});
+
+CREATE INDEX IF NOT EXISTS idx_{{ tables.lot_progress_table }}_for_latest
+    ON {{ tables.lot_progress_table }} ({{ columns.lot_id }}, {{ columns.stage_name }}, {{ columns.snapshot_cut }} DESC);
+
+CREATE INDEX IF NOT EXISTS idx_{{ tables.lot_progress_table }}_product_lot_stage_snapshot
+    ON {{ tables.lot_progress_table }} ({{ columns.product_id }}, {{ columns.lot_id }}, {{ columns.stage_name }}, {{ columns.snapshot_cut }} DESC);
+
+CREATE INDEX IF NOT EXISTS idx_{{ tables.lot_progress_table }}_product_stage_time_done
+    ON {{ tables.lot_progress_table }} ({{ columns.product_id }}, {{ columns.stage_time }})
+    WHERE {{ columns.stage_end }} IS NOT NULL
+      AND {{ columns.duration_seconds }} IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_{{ tables.lot_progress_table }}_path_id
+    ON {{ tables.lot_progress_table }} ({{ columns.path_id }})
+    WHERE {{ columns.path_id }} IS NOT NULL;

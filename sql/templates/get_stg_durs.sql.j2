@@ -1,0 +1,92 @@
+{# Fetch stage duration data from lot_progress_table #}
+WITH lot_parent_map AS (
+    SELECT
+        p.{{ columns.product_id }} AS product_id,
+        p.{{ columns.lot_id }} AS lot_id,
+        p.{{ columns.parent_lot_id }} AS parent_lot_id,
+        ROW_NUMBER() OVER(
+            PARTITION BY p.{{ columns.product_id }}, p.{{ columns.lot_id }}
+            ORDER BY p.{{ columns.created_at }} ASC
+        ) as rn
+    FROM {{ tables.snapshot_table }} p
+    WHERE p.{{ columns.parent_lot_id }} IS NOT NULL
+
+    {% if product_id %}
+    AND p.{{ columns.product_id }} = {{ product_id|sql }}
+    {% endif %}
+
+    {% if lot_id %}
+    AND p.{{ columns.lot_id }} = {{ lot_id|sql }}
+    {% endif %}
+),
+
+valid_parent_lots AS (
+    SELECT
+        product_id,
+        lot_id
+    FROM lot_parent_map
+    WHERE rn = 1
+      AND parent_lot_id = lot_id
+),
+
+latest_lot_progress AS (
+    SELECT
+        lp.{{ columns.product_id }},
+        lp.{{ columns.lot_id }},
+        lp.{{ columns.stage_name }},
+        lp.{{ columns.stage_type }},
+        lp.{{ columns.stage_time }},
+        lp.{{ columns.stage_end }},
+        lp.{{ columns.duration_seconds }},
+        ROW_NUMBER() OVER(
+            PARTITION BY lp.{{ columns.lot_id }}, lp.{{ columns.stage_name }} 
+            ORDER BY lp.{{ columns.snapshot_cut }} DESC
+        ) as rn
+    FROM {{ tables.lot_progress_table }} lp
+    JOIN valid_parent_lots vpl
+        ON vpl.product_id = lp.{{ columns.product_id }}
+        AND vpl.lot_id = lp.{{ columns.lot_id }}
+    WHERE 1=1
+    {# WHERE {{ columns.stage_type }} != 'predicted' #}
+
+    {% if product_id %}
+    AND lp.{{ columns.product_id }} = {{ product_id|sql }}
+    {% endif %}
+    
+    {% if stage_name %}
+    AND lp.{{ columns.stage_name }} = {{ stage_name|sql }}
+    {% endif %}
+
+    {% if lot_id %}
+    AND lp.{{ columns.lot_id }} = {{ lot_id|sql }}
+    {% endif %}
+
+    {% if cut_time %}
+    AND lp.{{ columns.snapshot_cut }} <= {{ cut_time|sql }}
+    {% endif %}
+)
+
+SELECT
+    {{ columns.product_id }} AS product_id,
+    {{ columns.lot_id }} AS lot_id,
+    {{ columns.stage_name }} AS stage_name,
+    {{ columns.stage_type }} AS stage_type,
+    {{ columns.stage_time }} AS start_time,
+    {{ columns.stage_end }} AS end_time,
+    {{ columns.duration_seconds }} AS duration_seconds
+FROM latest_lot_progress
+WHERE rn = 1
+    AND {{ columns.stage_end }} IS NOT NULL
+    AND {{ columns.duration_seconds }} IS NOT NULL
+
+    {% if snapshot_start %}
+    AND {{ columns.stage_time }} >= {{ snapshot_start|sql }}
+    {% endif %}
+
+    {% if snapshot_end %}
+    AND {{ columns.stage_time }} <= {{ snapshot_end|sql }}
+    {% endif %}
+ORDER BY 
+    {{ columns.product_id }}, 
+    {{ columns.lot_id }}, 
+    {{ columns.stage_time }};

@@ -1,0 +1,17 @@
+{# Get earliest and latest available snapshot time for one product up to snapshot_end #}
+SELECT
+    MIN({{ columns.created_at }}) AS min_created_at,
+    MAX({{ columns.created_at }}) AS max_created_at
+FROM {{ tables.snapshot_table }}
+WHERE {{ columns.stage }} IS NOT NULL
+  AND {{ columns.product_id }} = {{ product_id|sql }}
+  {% if include_parent_filter %}
+  AND {{ columns.lot_id }} = {{ columns.parent_lot_id }}
+  {% endif %}
+  {% if snapshot_start is defined and snapshot_start is not none %}
+  AND {{ columns.created_at }} >= {{ snapshot_start|sql }}
+  {% endif %}
+  {% if snapshot_end is defined and snapshot_end is not none %}
+  AND {{ columns.created_at }} <= {{ snapshot_end|sql }};
+  {% endif %}
+;

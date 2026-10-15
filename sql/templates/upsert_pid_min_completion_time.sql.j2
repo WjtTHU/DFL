@@ -1,0 +1,12 @@
+{# Template for inserting/updating min completion time #}
+INSERT INTO {{ tables.products_table }} (
+    {{ columns.product_id }},
+    {{ columns.path_start_time }},
+    {{ columns.path_end_time }},
+    {{ columns.min_completion_time }}
+)
+VALUES (%s, %s, %s, %s)
+ON CONFLICT ({{ columns.product_id }}, {{ columns.path_start_time }}, {{ columns.path_end_time }})
+DO UPDATE SET
+    {{ columns.min_completion_time }} = EXCLUDED.{{ columns.min_completion_time }},
+    {{ columns.calculation_time }} = NOW()

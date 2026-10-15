@@ -1,0 +1,28 @@
+{# Distinct snapshot times for a lot id #}
+WITH lot_meta AS (
+  SELECT
+    MIN({{ columns.created_at }}) FILTER (
+      WHERE {{ columns.stage }} IS NOT NULL
+    ) AS first_created_at,
+    MIN({{ columns.wafer_start_date }}) FILTER (
+      WHERE {{ columns.wafer_start_date }} IS NOT NULL
+    ) AS wafer_start_date
+  FROM {{ tables.snapshot_table }}
+  WHERE {{ columns.lot_id }} = {{ lot_id|sql }}
+)
+SELECT DISTINCT
+  s.{{ columns.created_at }} AS created_at,
+  s.{{ columns.product_id }} AS product_id,
+  COALESCE(s.{{ columns.wafer_start_date }}, lot_meta.wafer_start_date) AS wafer_start_date,
+  lot_meta.first_created_at AS first_created_at
+FROM {{ tables.snapshot_table }} s
+CROSS JOIN lot_meta
+WHERE s.{{ columns.lot_id }} = {{ lot_id|sql }}
+  AND s.{{ columns.stage }} IS NOT NULL
+  {% if snapshot_start %}
+  AND s.{{ columns.created_at }} >= {{ snapshot_start|sql }}
+  {% endif %}
+  {% if snapshot_end %}
+  AND s.{{ columns.created_at }} <= {{ snapshot_end|sql }}
+  {% endif %}
+ORDER BY s.{{ columns.created_at }} ASC

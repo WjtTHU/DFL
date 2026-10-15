@@ -1,0 +1,10 @@
+SELECT
+    COUNT(*)::BIGINT AS row_count,
+    SUM(CASE WHEN {{ columns.parent_lot_id }} = {{ columns.lot_id }} THEN 1 ELSE 0 END)::BIGINT AS parent_match_count,
+    COUNT(DISTINCT {{ columns.product_id }})::BIGINT AS distinct_product_count,
+    CASE
+        WHEN COUNT(DISTINCT {{ columns.product_id }}) = 1 THEN MIN({{ columns.product_id }})
+        ELSE NULL
+    END AS unique_product_id
+FROM {{ tables.snapshot_table }}
+WHERE {{ columns.lot_id }} = {{ lot_id | sql }};

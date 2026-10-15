@@ -1,0 +1,15 @@
+{# Template for inserting cached primary/secondary paths #}
+INSERT INTO {{ tables.path_table }} (
+    {{ columns.product_id }},
+    {{ columns.path }},
+    {{ columns.lot_count }},
+    {{ columns.wafer_qty }},
+    {{ columns.time_stats }},
+    {{ columns.is_primary_path }},
+    {{ columns.clustering_method }},
+    {{ columns.clustering_params }},
+    {{ columns.start_time }},
+    {{ columns.end_time }}
+)
+VALUES (%s, %s, %s, %s, %s::jsonb, %s, %s, %s::jsonb, %s, %s)
+ON CONFLICT DO NOTHING

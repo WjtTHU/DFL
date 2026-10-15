@@ -1,0 +1,49 @@
+{# Snapshot table schema template #}
+CREATE TABLE IF NOT EXISTS {{ tables.raw_table }} (
+    {{ columns.product_id }} VARCHAR(255) NOT NULL,
+    {{ columns.lot_id }} VARCHAR(255) NOT NULL,
+    {{ columns.parent_lot_id }} VARCHAR(255),
+    {{ columns.lot_status }} VARCHAR(50),
+    {{ columns.stage }} VARCHAR(255),
+    total_layers INTEGER,
+    rem_layers INTEGER,
+    step_track_in_date DATE,
+    wafer_start_date DATE,
+    wafer_out_date DATE,
+    {{ columns.current_wafer_qty }} INTEGER,
+    {{ columns.created_at }} TIMESTAMP NOT NULL
+);
+
+-- Create indexes for common query patterns
+CREATE INDEX IF NOT EXISTS idx_{{ tables.raw_table }}_lot_id 
+    ON {{ tables.raw_table }} ({{ columns.lot_id }});
+
+CREATE INDEX IF NOT EXISTS idx_{{ tables.raw_table }}_product_id 
+    ON {{ tables.raw_table }} ({{ columns.product_id }});
+
+CREATE INDEX IF NOT EXISTS idx_{{ tables.raw_table }}_created_at 
+    ON {{ tables.raw_table }} ({{ columns.created_at }});
+
+CREATE INDEX IF NOT EXISTS idx_{{ tables.raw_table }}_lot_created 
+    ON {{ tables.raw_table }} ({{ columns.lot_id }}, {{ columns.created_at }});
+
+CREATE INDEX IF NOT EXISTS idx_{{ tables.raw_table }}_stage 
+    ON {{ tables.raw_table }} ({{ columns.stage }});
+
+-- Composite index for common queries
+CREATE INDEX IF NOT EXISTS idx_{{ tables.raw_table }}_composite 
+    ON {{ tables.raw_table }} (
+        {{ columns.product_id }}, 
+        {{ columns.lot_id }}, 
+        {{ columns.parent_lot_id }}, 
+        {{ columns.created_at }}
+    );
+
+COMMENT ON TABLE {{ tables.raw_table }} IS 'Time-series snapshots of lot statuses in the manufacturing system';
+COMMENT ON COLUMN {{ tables.raw_table }}.{{ columns.product_id }} IS 'Product identifier';
+COMMENT ON COLUMN {{ tables.raw_table }}.{{ columns.lot_id }} IS 'Unique lot identifier';
+COMMENT ON COLUMN {{ tables.raw_table }}.{{ columns.parent_lot_id }} IS 'Parent lot ID (for split lots)';
+COMMENT ON COLUMN {{ tables.raw_table }}.{{ columns.lot_status }} IS 'Current status of the lot (e.g., Active, Hold, Run, Wait)';
+COMMENT ON COLUMN {{ tables.raw_table }}.{{ columns.stage }} IS 'Current manufacturing stage/module';
+COMMENT ON COLUMN {{ tables.raw_table }}.{{ columns.current_wafer_qty }} IS 'Number of wafers currently in the lot';
+COMMENT ON COLUMN {{ tables.raw_table }}.{{ columns.created_at }} IS 'Timestamp when the snapshot was taken';

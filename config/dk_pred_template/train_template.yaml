@@ -1,0 +1,34 @@
+data:
+  cuts:
+    train_end: "2025-02-10"
+    val_end: "2025-03-31"
+
+training:
+  batch_size: 128
+  epochs: 80
+  seed: 42
+  save_dir: "checkpoints"
+  log_dir: "experiments"
+
+loss:
+  type: "L1Loss"  # L1Loss or SmoothL1loss
+
+optimizer:
+  type: "AdamW"
+  params:
+    # lr: 0.0003
+    lr: 0.002
+    weight_decay: 0.00015
+
+scheduler:
+  type: "CosineAnnealingWarmRestarts"
+  warmup_epoch: 10
+  params:
+    T_0: 20
+    T_mult: 2
+    eta_min: 0.0000001
+
+early_stopping:
+  monitor: "val_MAE"
+  patience: 30
+  min_delta: 0

@@ -1,0 +1,41 @@
+{# Lots of a product whose cached model-predicted completion falls on requested dates.
+   Uses each lot's latest raw snapshot before the end of each target date.
+#}
+WITH target_days AS (
+  SELECT target_day::date
+  FROM (VALUES
+    {% for target_day in target_days %}
+    ({{ target_day|sql }}::date){% if not loop.last %},{% endif %}
+    {% endfor %}
+  ) AS v(target_day)
+),
+latest_cut AS (
+  SELECT
+    s.{{ columns.lot_id }} AS lot_id,
+    s.{{ columns.product_id }} AS product_id,
+    td.target_day,
+    MAX(s.{{ columns.created_at }}) AS snapshot_cut
+  FROM target_days td
+  JOIN {{ tables.snapshot_table }} s
+    ON s.{{ columns.product_id }} = {{ product_id|sql }}
+   AND s.{{ columns.stage }} IS NOT NULL
+   AND s.{{ columns.lot_id }} = s.{{ columns.parent_lot_id }}
+   AND s.{{ columns.created_at }} < (td.target_day + interval '1 day')
+  GROUP BY
+    s.{{ columns.lot_id }},
+    s.{{ columns.product_id }},
+    td.target_day
+)
+SELECT
+  lc.target_day,
+  p.{{ columns.lot_id }} AS lot_id,
+  lc.snapshot_cut,
+  p.{{ columns.predicted_completion_time }} AS finish_time
+FROM {{ tables.lot_completion_predictions_table }} p
+JOIN latest_cut lc
+  ON p.{{ columns.lot_id }} = lc.lot_id
+ AND p.{{ columns.snapshot_cut }} = lc.snapshot_cut
+WHERE p.{{ columns.product_id }} = {{ product_id|sql }}
+  AND p.{{ columns.predicted_completion_time }} >= lc.target_day
+  AND p.{{ columns.predicted_completion_time }} < (lc.target_day + interval '1 day')
+ORDER BY lc.target_day, p.{{ columns.lot_id }}

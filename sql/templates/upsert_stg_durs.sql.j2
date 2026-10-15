@@ -1,0 +1,16 @@
+{# Template for updating stage duration data in lot_progress_table #}
+{# This updates the stage_end and duration_seconds columns for existing records #}
+{% for row in rows %}
+UPDATE {{ tables.lot_progress_table }}
+SET
+    {{ columns.stage_end }} = {{ row.end_time|sql }},
+    {{ columns.duration_seconds }} = {{ row.duration_seconds|sql }},
+    {{ columns.last_updated_at }} = CURRENT_TIMESTAMP
+WHERE 
+    {{ columns.lot_id }} = {{ row.lot_id|sql }}
+    AND {{ columns.stage_name }} = {{ row.stage_name|sql }}
+    AND {{ columns.stage_time }} = {{ row.start_time|sql }};
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}

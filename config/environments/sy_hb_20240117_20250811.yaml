@@ -1,0 +1,63 @@
+database:
+  tables:
+    snapshot_table: "hb_20240117_20250811_clean"
+    products_table: "sy_hb_20240117_20250811_products"
+    lot_progress_table: "sy_hb_20240117_20250811_lot_progress"
+    lot_completion_predictions_table: "sy_hb_20240117_20250811_lot_complete_pred"
+    path_table: "sy_hb_20240117_20250811_paths"
+    raw_table: "hb_20240117_20250811"
+
+  # Column Name Mapping - logical name : DB col name
+  columns:
+    # Universal
+    product_id: "product_id"
+    lot_id: "lot_id"
+
+    # Snapshot table
+    parent_lot_id: "parent_lot_id"
+    created_at: "created_at"
+    lot_status: "lot_status"
+    stage: "stage"
+    current_wafer_qty: "current_wafer_qty"
+    wafer_start_date: "wafer_start_date"
+    rem_layers: "rem_layers"
+
+    # Product table
+    primary_path: "primary_path"
+    min_completion_time: "min_completion_time"
+    primary_path_durations: "primary_path_durations"
+    calculation_time: "calculation_time"
+    path_start_time: "path_start_time"
+    path_end_time: "path_end_time"
+
+    # Path table
+    path_id: "path_id"
+    path: "path"
+    lot_count: "lot_count"
+    wafer_qty: "wafer_qty"
+    time_stats: "time_stats"
+    is_primary_path: "is_primary_path"
+    clustering_method: "clustering_method"
+    clustering_params: "clustering_params"
+    start_time: "start_time"
+    end_time: "end_time"
+
+    # Lot Progress table
+    snapshot_cut: "snapshot_cut"
+    stage_name: "stage_name"
+    stage_time: "stage_time"
+    stage_type: "stage_type"
+    stage_end: "stage_end"
+    duration_seconds: "duration_seconds"
+    prediction_split_time: "prediction_split_time"
+    remaining_days: "remaining_days"
+    predicted_completion_time: "predicted_completion_time"
+    model_dir: "model_dir"
+    last_updated_at: "last_updated_at"
+
+  # Query template directory
+  templates:
+    base_dir: "sql/templates"
+
+  # Environment-specific settings
+  environment: "hb_large"

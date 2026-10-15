@@ -1,0 +1,66 @@
+# DK Production Environment Configuration
+# Extends base sql_config.yaml for DK database environment
+
+database:
+  tables:
+    snapshot_table: "cp_clean"
+    products_table: "sy_cp_products"
+    lot_progress_table: "sy_cp_lot_progress"
+    lot_completion_predictions_table: "sy_cp_pred"
+    path_table: "sy_cp_paths"
+    raw_table: "cp"
+
+  # Column Name Mapping - logical name : DB col name
+  columns:
+    # Universal
+    product_id: "device"
+    lot_id: "LotId"
+
+    # Snapshot table
+    parent_lot_id: "parentLotId"
+    created_at: "action_date"
+    lot_status: "action_id"
+    stage: "stage_id"
+    current_wafer_qty: "wafer_id"
+    wafer_start_date: "start_date"
+    rem_layers: "wafer_id"
+
+    # Product table
+    primary_path: "primary_path"
+    min_completion_time: "min_completion_time"
+    primary_path_durations: "primary_path_durations"
+    calculation_time: "calculation_time"
+    path_start_time: "path_start_time"
+    path_end_time: "path_end_time"
+
+    # Path table
+    path_id: "path_id"
+    path: "path"
+    lot_count: "lot_count"
+    wafer_qty: "wafer_qty"
+    time_stats: "time_stats"
+    is_primary_path: "is_primary_path"
+    clustering_method: "clustering_method"
+    clustering_params: "clustering_params"
+    start_time: "start_time"
+    end_time: "end_time"
+
+    # Lot Progress table
+    snapshot_cut: "snapshot_cut"
+    stage_name: "stage_name"
+    stage_time: "stage_time"
+    stage_type: "stage_type"
+    stage_end: "stage_end"
+    duration_seconds: "duration_seconds"
+    prediction_split_time: "prediction_split_time"
+    remaining_days: "remaining_days"
+    predicted_completion_time: "predicted_completion_time"
+    model_dir: "model_dir"
+    last_updated_at: "last_updated_at"
+
+  # Query template directory
+  templates:
+    base_dir: "sql/templates"
+
+  # Environment-specific settings
+  environment: "dk"

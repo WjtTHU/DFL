@@ -1,0 +1,39 @@
+WITH lot_parent_map AS (
+  SELECT
+    s.{{ columns.product_id }} AS product_id,
+    s.{{ columns.lot_id }} AS lot_id,
+    s.{{ columns.parent_lot_id }} AS parent_lot_id,
+    ROW_NUMBER() OVER (
+      PARTITION BY s.{{ columns.product_id }}, s.{{ columns.lot_id }}
+      ORDER BY s.{{ columns.created_at }} ASC
+    ) AS rn
+  FROM {{ tables.snapshot_table }} s
+  WHERE s.{{ columns.parent_lot_id }} IS NOT NULL
+    AND s.{{ columns.product_id }} = {{ pid|sql }}
+),
+valid_parent_lots AS (
+  SELECT product_id, lot_id
+  FROM lot_parent_map
+  WHERE rn = 1
+    AND parent_lot_id = lot_id
+)
+SELECT
+  lp.{{ columns.stage_name }} AS stage_name,
+  lp.{{ columns.stage_time }} AS enter_time,
+  lp.{{ columns.stage_type }} AS stage_type,
+  lp.{{ columns.product_id }} AS product_id,
+  lp.{{ columns.lot_id }} AS lot_id,
+  lp.{{ columns.snapshot_cut}}
+FROM {{ tables.lot_progress_table }} lp
+JOIN valid_parent_lots vpl
+  ON vpl.product_id = lp.{{ columns.product_id }}
+ AND vpl.lot_id = lp.{{ columns.lot_id }}
+WHERE 1=1
+
+  AND lp.{{ columns.product_id }} = {{ pid|sql }}
+
+  {% if snapshot_cut %}
+  AND lp.{{ columns.snapshot_cut }} = {{ snapshot_cut|sql }}
+  {% endif %}
+
+ORDER BY lp.{{ columns.stage_time }} ASC

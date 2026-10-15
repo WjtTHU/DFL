@@ -1,0 +1,46 @@
+{# Required completion prediction rows for product date-out target dates.
+   For each requested target day, use each lot's latest raw snapshot before the end
+   of that day. Future target days naturally resolve to the latest available snapshot.
+#}
+WITH target_days AS (
+  SELECT target_day::date
+  FROM (VALUES
+    {% for target_day in target_days %}
+    ({{ target_day|sql }}::date){% if not loop.last %},{% endif %}
+    {% endfor %}
+  ) AS v(target_day)
+),
+required_cuts AS (
+  SELECT DISTINCT
+    s.{{ columns.lot_id }} AS lot_id,
+    s.{{ columns.product_id }} AS product_id,
+    td.target_day,
+    MAX(s.{{ columns.created_at }}) AS snapshot_cut
+  FROM target_days td
+  JOIN {{ tables.snapshot_table }} s
+    ON s.{{ columns.product_id }} = {{ product_id|sql }}
+   AND s.{{ columns.stage }} IS NOT NULL
+   AND s.{{ columns.lot_id }} = s.{{ columns.parent_lot_id }}
+   AND s.{{ columns.created_at }} < (td.target_day + interval '1 day')
+  GROUP BY
+    s.{{ columns.lot_id }},
+    s.{{ columns.product_id }},
+    td.target_day
+),
+ready_predictions AS (
+  SELECT DISTINCT
+    p.{{ columns.lot_id }} AS lot_id,
+    p.{{ columns.snapshot_cut }} AS snapshot_cut
+  FROM {{ tables.lot_completion_predictions_table }} p
+  WHERE p.{{ columns.product_id }} = {{ product_id|sql }}
+)
+SELECT
+  rc.target_day,
+  rc.lot_id,
+  rc.snapshot_cut,
+  (rp.lot_id IS NOT NULL) AS is_ready
+FROM required_cuts rc
+LEFT JOIN ready_predictions rp
+  ON rp.lot_id = rc.lot_id
+ AND rp.snapshot_cut = rc.snapshot_cut
+ORDER BY rc.lot_id, rc.snapshot_cut

@@ -1,0 +1,32 @@
+{# Get Data for Model training #}
+SELECT
+    {{ columns.product_id }} AS product_id,
+    {{ columns.lot_id }} AS lot_id,
+    {{ columns.parent_lot_id }} AS parent_lot_id,
+    {{ columns.lot_status }} AS lot_status,
+    {{ columns.stage }} AS stage,
+    {{ columns.current_wafer_qty }} AS current_wafer_qty,
+    {{ columns.created_at }} AS created_at
+{% for col in extra_feat_cols | default([]) %}
+    , {{ columns[col] }} AS {{ col }}
+{% endfor %}
+FROM {{ tables.snapshot_table }}
+WHERE
+    {{ columns.stage }} IS NOT NULL
+    AND {{ columns.product_id }} IS NOT NULL
+    AND {{ columns.lot_id }} IS NOT NULL
+    AND {{ columns.parent_lot_id }} IS NOT NULL
+    AND {{ columns.lot_status }} IS NOT NULL
+    AND {{ columns.current_wafer_qty }} IS NOT NULL
+    AND {{ columns.created_at }} IS NOT NULL
+{% if snapshot_start is not none %}
+    AND {{ columns.created_at }} >= {{ snapshot_start | sql }}
+{% endif %}
+{% if snapshot_end is not none %}
+    AND {{ columns.created_at }} <= {{ snapshot_end | sql }}
+{% endif %}
+ORDER BY
+    {{ columns.product_id }},
+    {{ columns.lot_id }},
+    {{ columns.parent_lot_id }},
+    {{ columns.created_at }}

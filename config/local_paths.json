@@ -1,0 +1,31 @@
+{
+  "datasets": {
+    "cp": {
+      "csv": "../数据和字段映射关系/数据和字段映射关系/CP数据/cp_wip.csv",
+      "config_dir": "config/cp_pred_template",
+      "train_script": "scripts/training/train_CP_csv.py",
+      "checkpoint_dir": "outputs/cp/checkpoints",
+      "experiment_dir": "outputs/cp/experiments",
+      "log_dir": "outputs/cp/logs",
+      "plot": true
+    },
+    "dk": {
+      "csv": "../数据和字段映射关系/数据和字段映射关系/DK数据/combined_DK_wip_root_cleaned_with_FG.csv",
+      "config_dir": "config/dk_pred_template",
+      "train_script": "scripts/training/train_DK_csv.py",
+      "checkpoint_dir": "outputs/dk/checkpoints",
+      "experiment_dir": "outputs/dk/experiments",
+      "log_dir": "outputs/dk/logs",
+      "plot": true
+    },
+    "hb": {
+      "csv": "../数据和字段映射关系/数据和字段映射关系/HB数据/HB_full_cleaned.csv",
+      "config_dir": "config/hb_pred_template",
+      "train_script": "scripts/training/train_HB_csv.py",
+      "checkpoint_dir": "outputs/hb/checkpoints",
+      "experiment_dir": "outputs/hb/experiments",
+      "log_dir": "outputs/hb/logs",
+      "plot": false
+    }
+  }
+}

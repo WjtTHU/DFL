@@ -1,0 +1,21 @@
+{# Latest wafer qty per lot for a product, optionally as of target_date end #}
+WITH latest_snapshot AS (
+  SELECT
+    s.{{ columns.lot_id }} AS lot_id,
+    s.{{ columns.current_wafer_qty }} AS current_wafer_qty,
+    ROW_NUMBER() OVER (
+      PARTITION BY s.{{ columns.lot_id }}
+      ORDER BY s.{{ columns.created_at }} DESC
+    ) AS rn
+  FROM {{ tables.snapshot_table }} s
+  WHERE s.{{ columns.product_id }} = {{ product_id|sql }}
+    AND s.{{ columns.lot_id }} = s.{{ columns.parent_lot_id }}
+    {% if target_date %}
+    AND s.{{ columns.created_at }} < ({{ target_date|sql }}::date + interval '1 day')
+    {% endif %}
+)
+SELECT
+  lot_id,
+  current_wafer_qty
+FROM latest_snapshot
+WHERE rn = 1

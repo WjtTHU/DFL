@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "code_baseline": "Enterprise v0.9.5 with supplied CSV entry points and dataset configs",
+  "purpose": "Identify the external CSV inputs; datasets are not stored in Git.",
+  "datasets": {
+    "cp": {
+      "path_relative_to_project": "../数据和字段映射关系/数据和字段映射关系/CP数据/cp_wip.csv",
+      "file_name": "cp_wip.csv",
+      "size_bytes": 1351887200,
+      "sha256": "d267e03ddbdd6133a5d6189b8a4b468f1d8100561953f74111a8c5c7422a5763"
+    },
+    "dk": {
+      "path_relative_to_project": "../数据和字段映射关系/数据和字段映射关系/DK数据/combined_DK_wip_root_cleaned_with_FG.csv",
+      "file_name": "combined_DK_wip_root_cleaned_with_FG.csv",
+      "size_bytes": 145420087,
+      "sha256": "08dfe9be49adf046c187b8db0b35bfc59d58f6bea494007b022b103fe6d81fe7"
+    },
+    "hb": {
+      "path_relative_to_project": "../数据和字段映射关系/数据和字段映射关系/HB数据/HB_full_cleaned.csv",
+      "file_name": "HB_full_cleaned.csv",
+      "size_bytes": 665524289,
+      "sha256": "cbe2bcf380079771175ee9c243b2e320c618a3ab5696ea6748de197af2ffb2de"
+    }
+  }
+}

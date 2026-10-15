@@ -1,0 +1,26 @@
+{# Template for inserting lot progress #}
+INSERT INTO {{ tables.lot_progress_table }} (
+    {{ columns.lot_id }},
+    {{ columns.snapshot_cut }},
+    {{ columns.product_id }},
+    {{ columns.stage_name }},
+    {{ columns.stage_time }},
+    {{ columns.stage_type }},
+    {{ columns.stage_end }},
+    {{ columns.duration_seconds }},
+    {{ columns.path_id }}
+)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+ON CONFLICT (
+    {{ columns.lot_id }},
+    {{ columns.snapshot_cut }},
+    {{ columns.stage_name }}
+)
+DO UPDATE SET
+    {{ columns.product_id }} = EXCLUDED.{{ columns.product_id }},
+    {{ columns.stage_time }} = EXCLUDED.{{ columns.stage_time }},
+    {{ columns.stage_type }} = EXCLUDED.{{ columns.stage_type }},
+    {{ columns.stage_end }} = EXCLUDED.{{ columns.stage_end }},
+    {{ columns.duration_seconds }} = EXCLUDED.{{ columns.duration_seconds }},
+    {{ columns.path_id }} = EXCLUDED.{{ columns.path_id }},
+    last_updated_at = NOW()

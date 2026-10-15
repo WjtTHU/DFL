@@ -1,0 +1,79 @@
+{# Stage Ingress Statistics / Capacity Assessment Query Template #}
+WITH latest_stage_entries AS (
+    SELECT
+        lp.{{ columns.product_id }} AS product_id,
+        lp.{{ columns.lot_id }},
+        lp.{{ columns.stage_name }},
+        lp.{{ columns.stage_time }},
+        ROW_NUMBER() OVER (
+            PARTITION BY lp.{{ columns.product_id }}, lp.{{ columns.lot_id }}, lp.{{ columns.stage_name }}
+            ORDER BY lp.{{ columns.snapshot_cut }} DESC
+        ) as rn
+    FROM {{ tables.lot_progress_table }} lp
+    WHERE 1=1
+
+        {% if product_id %}
+        AND lp.{{ columns.product_id }} = {{ product_id|sql }}
+        {% endif %}
+
+        {% if stage_name %}
+            {% if stage_name is string %}
+        AND lp.{{ columns.stage_name }} = {{ stage_name|sql }}
+            {% else %}
+        AND lp.{{ columns.stage_name }} IN {{ stage_name|sql }}
+            {% endif %}
+        {% endif %}
+
+        {% if snapshot_start %}
+        AND lp.{{ columns.stage_time }} >= {{ snapshot_start|sql }}
+        {% endif %}
+
+        {% if snapshot_end %}
+        AND lp.{{ columns.stage_time }} <= {{ snapshot_end|sql }}
+        {% endif %}
+),
+
+entry_aligned_wafers AS (
+    SELECT
+        e.product_id,
+        e.lot_id,
+        e.stage_name,
+        e.stage_time,
+        COALESCE(wafer_at_entry.wafer_count, first_seen.wafer_count, 0) AS entering_wafer_count
+    FROM latest_stage_entries AS e
+    LEFT JOIN LATERAL (
+        SELECT
+            s.{{ columns.current_wafer_qty }} AS wafer_count
+        FROM {{ tables.snapshot_table }} AS s
+        WHERE s.{{ columns.product_id }} = e.product_id
+          AND s.{{ columns.lot_id }} = e.lot_id
+          AND s.{{ columns.current_wafer_qty }} IS NOT NULL
+          AND s.{{ columns.created_at }} <= e.stage_time
+        ORDER BY s.{{ columns.created_at }} DESC
+        LIMIT 1
+    ) AS wafer_at_entry ON TRUE
+    LEFT JOIN LATERAL (
+        SELECT
+            s.{{ columns.current_wafer_qty }} AS wafer_count
+        FROM {{ tables.snapshot_table }} AS s
+        WHERE s.{{ columns.product_id }} = e.product_id
+          AND s.{{ columns.lot_id }} = e.lot_id
+          AND s.{{ columns.current_wafer_qty }} IS NOT NULL
+        ORDER BY s.{{ columns.created_at }} ASC
+        LIMIT 1
+    ) AS first_seen ON wafer_at_entry.wafer_count IS NULL
+    WHERE e.rn = 1
+)
+
+SELECT
+    e.stage_time::date AS calendar_date,
+    e.stage_name AS stage_name,
+    COUNT(DISTINCT (e.product_id, e.lot_id)) AS entering_lot_count,
+    COALESCE(SUM(e.entering_wafer_count), 0)::BIGINT AS entering_wafer_count
+FROM entry_aligned_wafers AS e
+GROUP BY
+    calendar_date,
+    e.stage_name
+ORDER BY
+    calendar_date,
+    e.stage_name;

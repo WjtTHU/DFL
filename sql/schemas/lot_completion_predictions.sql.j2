@@ -1,0 +1,25 @@
+{# Lot completion prediction cache table schema template #}
+CREATE TABLE IF NOT EXISTS {{ tables.lot_completion_predictions_table }} (
+    {{ columns.lot_id }} VARCHAR(255) NOT NULL,
+    {{ columns.snapshot_cut }} TIMESTAMP NOT NULL,
+    {{ columns.product_id }} VARCHAR(255) NOT NULL,
+    {{ columns.prediction_split_time }} TIMESTAMP NOT NULL,
+    {{ columns.remaining_days }} DOUBLE PRECISION NOT NULL,
+    {{ columns.predicted_completion_time }} TIMESTAMP NOT NULL,
+    {{ columns.model_dir }} TEXT NOT NULL,
+    {{ columns.last_updated_at }} TIMESTAMP DEFAULT NOW(),
+
+    PRIMARY KEY ({{ columns.lot_id }}, {{ columns.snapshot_cut }})
+);
+
+CREATE INDEX IF NOT EXISTS idx_{{ tables.lot_completion_predictions_table }}_pc
+    ON {{ tables.lot_completion_predictions_table }} (
+        {{ columns.product_id }},
+        {{ columns.predicted_completion_time }}
+    );
+
+CREATE INDEX IF NOT EXISTS idx_{{ tables.lot_completion_predictions_table }}_ps
+    ON {{ tables.lot_completion_predictions_table }} (
+        {{ columns.product_id }},
+        {{ columns.snapshot_cut }}
+    );

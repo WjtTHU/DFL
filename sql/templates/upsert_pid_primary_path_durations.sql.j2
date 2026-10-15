@@ -1,0 +1,12 @@
+{# Template for inserting/updating primary path durations #}
+INSERT INTO {{ tables.products_table }} (
+    {{ columns.product_id }},
+    {{ columns.path_start_time }},
+    {{ columns.path_end_time }},
+    {{ columns.primary_path_durations }}
+)
+VALUES (%s, %s, %s, %s)
+ON CONFLICT ({{ columns.product_id }}, {{ columns.path_start_time }}, {{ columns.path_end_time }})
+DO UPDATE SET
+    {{ columns.primary_path_durations }} = EXCLUDED.{{ columns.primary_path_durations }},
+    {{ columns.calculation_time }} = NOW()

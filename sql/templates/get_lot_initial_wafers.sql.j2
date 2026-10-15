@@ -1,0 +1,28 @@
+{# Initial wafer qty per lot from the first snapshot occurrence #}
+WITH first_snapshot AS (
+  SELECT
+    {{ columns.product_id }} AS product_id,
+    {{ columns.lot_id }} AS lot_id,
+    {{ columns.current_wafer_qty }} AS wafer_count,
+    ROW_NUMBER() OVER (
+      PARTITION BY {{ columns.product_id }}, {{ columns.lot_id }}
+      ORDER BY {{ columns.created_at }} ASC
+    ) AS rn
+  FROM {{ tables.snapshot_table }}
+  WHERE {{ columns.current_wafer_qty }} IS NOT NULL
+
+    {% if product_id %}
+    AND {{ columns.product_id }} = {{ product_id|sql }}
+    {% endif %}
+
+    {% if lot_ids %}
+    AND {{ columns.lot_id }} IN {{ lot_ids|sql }}
+    {% endif %}
+)
+SELECT
+  product_id,
+  lot_id,
+  wafer_count
+FROM first_snapshot
+WHERE rn = 1
+ORDER BY product_id, lot_id

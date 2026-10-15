@@ -1,0 +1,16 @@
+{# Product IDs that already have all calculations #}
+SELECT {{ columns.product_id }} AS product_id
+FROM {{ tables.products_table }}
+WHERE {{ columns.primary_path }} IS NOT NULL
+  AND {{ columns.min_completion_time }} IS NOT NULL
+  AND {{ columns.primary_path_durations }} IS NOT NULL
+  AND {{ columns.path_start_time }} IS NOT NULL
+  AND {{ columns.path_end_time }} IS NOT NULL
+
+  {% if path_start_time %}
+  AND {{ columns.path_start_time }} = {{ path_start_time|sql }}
+  {% endif %}
+
+  {% if path_end_time %}
+  AND {{ columns.path_end_time }} = {{ path_end_time|sql }}
+  {% endif %}

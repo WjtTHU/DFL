@@ -1,0 +1,5 @@
+{# Shared ordering for product path queries #}
+({{ columns.path_end_time }} - {{ columns.path_start_time }}) DESC NULLS LAST,
+{{ columns.path_end_time }} DESC NULLS LAST,
+{{ columns.path_start_time }} ASC NULLS LAST,
+{{ columns.calculation_time }} DESC

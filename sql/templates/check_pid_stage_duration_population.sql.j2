@@ -1,0 +1,20 @@
+{# Check whether stage duration data exists in lot_progress_table for product/window #}
+SELECT
+    lp.{{ columns.stage_name }} AS stage_name,
+    COUNT(*) AS total_rows,
+    COUNT(lp.{{ columns.duration_seconds }}) AS duration_rows
+FROM {{ tables.lot_progress_table }} lp
+WHERE 1=1
+    {% if product_id %}
+    AND lp.{{ columns.product_id }} = {{ product_id|sql }}
+    {% endif %}
+    {% if stage_names %}
+    AND lp.{{ columns.stage_name }} IN {{ stage_names|sql }}
+    {% endif %}
+    {% if snapshot_start %}
+    AND lp.{{ columns.snapshot_cut }} >= {{ snapshot_start|sql }}
+    {% endif %}
+    {% if snapshot_end %}
+    AND lp.{{ columns.snapshot_cut }} <= {{ snapshot_end|sql }}
+    {% endif %}
+GROUP BY lp.{{ columns.stage_name }}

@@ -1,0 +1,35 @@
+{# Template for fetching cached primary/secondary paths for product(s) #}
+SELECT
+    {{ columns.path_id }},
+    {{ columns.product_id }},
+    {{ columns.path }},
+    {{ columns.lot_count }},
+    {{ columns.wafer_qty }},
+    {{ columns.time_stats }},
+    {{ columns.is_primary_path }},
+    {{ columns.start_time }},
+    {{ columns.end_time }}
+FROM {{ tables.path_table }}
+WHERE 1 = 1
+  {% if start_time is defined and start_time is not none %}
+  AND {{ columns.start_time }} = {{ start_time|sql }}
+  {% endif %}
+  {% if start_time_lower is defined and start_time_lower is not none %}
+  AND {{ columns.start_time }} >= {{ start_time_lower|sql }}
+  {% endif %}
+  {% if end_time is defined and end_time is not none %}
+  AND {{ columns.end_time }} = {{ end_time|sql }}
+  {% endif %}
+  {% if end_time_upper is defined and end_time_upper is not none %}
+  AND {{ columns.end_time }} <= {{ end_time_upper|sql }}
+  {% endif %}
+  {% if clustering_method is defined and clustering_method is not none %}
+  AND {{ columns.clustering_method }} = {{ clustering_method|sql }}
+  {% endif %}
+  {% if clustering_params is defined and clustering_params is not none %}
+  AND {{ columns.clustering_params }} = {{ clustering_params|sql }}::jsonb
+  {% endif %}
+  {% if product_ids %}
+  AND {{ columns.product_id }} IN {{ product_ids|sql }}
+  {% endif %}
+ORDER BY {{ columns.product_id }}, {{ columns.is_primary_path }} DESC, {{ columns.path_id }};

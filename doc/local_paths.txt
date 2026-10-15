@@ -1,0 +1,97 @@
+本地 WIP 项目路径说明
+
+工作区：E:\THU\Research\DFL_CODE
+本地运行目录：E:\THU\Research\DFL_CODE\local_wip
+统一入口：E:\THU\Research\DFL_CODE\local_wip\run.py
+统一路径配置：E:\THU\Research\DFL_CODE\local_wip\config\local_paths.json
+
+一、目录用途
+
+local_wip\
+  run.py                         检查路径、启动 CSV 训练和推理
+  local_paths.py                 根据本文件所在项目目录解析路径
+  config\local_paths.json        CP、DK、HB 的数据、配置、输出路径
+  config\cp_pred_template\       CP 企业配置（core/train/pretrain）
+  config\dk_pred_template\       DK 企业配置（core/train/pretrain）
+  config\hb_pred_template\       HB 企业配置（core/train/pretrain）
+  scripts\training\              三份 CSV 训练入口和 pretrain.py
+  src\wip_pred\                  模型、预处理、训练器及推理代码
+  src\wip_analysis\              原包依赖的公共模块
+  src\wip_api\、sql\、doc\       原包其他代码和文档
+  outputs\cp\                    CP 运行结果
+  outputs\dk\                    DK 运行结果
+  outputs\hb\                    HB 运行结果
+
+每种数据的 outputs 子目录包含：
+  checkpoints\<运行时间>\        best_model.pth、preprocessor.pkl、模型 config.yaml
+  experiments\<运行时间>\        训练配置、指标、TensorBoard 和图表
+  logs\                           启动及训练日志
+
+二、当前接入的 CSV
+
+CP：
+E:\THU\Research\DFL_CODE\数据和字段映射关系\数据和字段映射关系\CP数据\cp_wip.csv
+
+DK：
+E:\THU\Research\DFL_CODE\数据和字段映射关系\数据和字段映射关系\DK数据\combined_DK_wip_root_cleaned_with_FG.csv
+
+HB：
+E:\THU\Research\DFL_CODE\数据和字段映射关系\数据和字段映射关系\HB数据\HB_full_cleaned.csv
+
+以上大文件保留在原位置，由 local_paths.json 引用。JSON 中的相对路径一律以 local_wip 为基准，与终端当前目录无关。如果只移动 local_wip 而不移动整个工作区，需要更新 csv 路径。
+
+三、原始资料的位置
+
+E:\THU\Research\DFL_CODE\v0.9.5_logs\          原始发布包、解压源码及日志
+E:\THU\Research\DFL_CODE\数据和字段映射关系\   取回的脚本、配置、说明和 CSV
+E:\THU\Research\DFL_CODE\data\                 最初的两个加密 CSV，保留用于对照
+E:\THU\Research\DFL_CODE\outputs\lot_trajectories\ 早期轨迹分析结果
+E:\THU\Research\DFL_CODE\scripts\              早期轨迹分析脚本
+
+本地模型默认接入第二节的新数据。早期轨迹分析结果不作为企业流程的训练输入。
+
+四、使用入口
+
+在 PowerShell 中切换到本地运行目录：
+  cd E:\THU\Research\DFL_CODE\local_wip
+
+检查全部路径（只需 Python 标准库，不读取大 CSV）：
+  python run.py check
+
+同时检查当前 Python 的主要运行依赖：
+  python run.py check --environment
+
+查看命令参数：
+  python run.py --help
+  python run.py train --help
+  python run.py predict --help
+
+在已配置好项目依赖的 Python 环境中启动训练：
+  python run.py train --dataset cp
+  python run.py train --dataset dk
+  python run.py train --dataset hb
+
+CP、DK 默认沿用原 CSV 脚本的绘图模式，HB 默认不绘图。可用 --no-plot / --plot 显式选择。
+
+训练后使用同一数据类型的 checkpoint 做预测，例如：
+  python run.py predict --dataset cp --checkpoint "outputs/cp/checkpoints/实际运行时间目录" --at "2026-06-01 06:58:26" --lot "实际LotId"
+
+--checkpoint 可以是绝对路径，也可以是相对 local_wip 的路径。
+--at 是调用者指定的预测截止时间；--lot 可重复传入以选择多个 Lot。
+推理使用该数据类型训练入口的同一预处理过程，并打印原模型输出的剩余天数。
+checkpoint 目录必须包含 config.yaml、best_model.pth、preprocessor.pkl。
+此处命令是使用示例，本次路径整理未启动训练或生成模型权重。
+
+也可从其他目录使用 run.py 的绝对路径，所有数据、配置、日志、模型路径仍以 local_wip 为基准。
+
+五、本地适配范围
+
+1. 将发布包复制到 local_wip，并将补充的训练脚本、配置和推理脚本放回对应模块目录。
+2. 原始 CSV、压缩包和取回资料保留原样。
+3. 从三份 CSV 训练脚本提取原有预处理代码为 load_snapshots，供训练与推理共同调用。字段、填充值、时间分箱、截断规则不变。
+4. CSV 入口不调用数据库清洗 SQL；不另加“过滤单工序 Lot”的规则。
+5. 修正 get_train_dataset 多传一个参数，以及绘图调用传入不支持的 as_html 参数的问题。
+6. 专用 YAML 内容保持原样；启动时仅将模型与日志输出路径覆盖为各数据类型的本地目录。
+7. 移除 CSV 入口未使用的数据库读取导入，数据输入通过 local_paths.json 定位。
+
+项目依赖版本依据 local_wip\pyproject.toml 和 uv.lock。路径检查成功不代表机器学习依赖已安装，也不代表训练或预测已经验证通过。

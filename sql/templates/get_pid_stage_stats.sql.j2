@@ -1,0 +1,153 @@
+{# Product stage statistics query template #}
+WITH all_analysis_snapshots AS (
+    SELECT DISTINCT aps.{{ columns.snapshot_cut }} AS analysis_snapshot
+    FROM {{ tables.lot_progress_table }} aps
+    WHERE 1=1
+        {% if product_id %}
+        AND aps.{{ columns.product_id }} = {{ product_id|sql }}
+        {% endif %}
+    {% if snapshot_start %}
+    AND aps.{{ columns.snapshot_cut }} >= {{ snapshot_start|sql }}
+    {% endif %}
+    {% if snapshot_end %}
+    AND aps.{{ columns.snapshot_cut }} <= {{ snapshot_end|sql }}
+    {% endif %}
+),
+
+lot_parent_map AS (
+    SELECT
+        pm.{{ columns.product_id }} AS product_id,
+        pm.{{ columns.lot_id }} AS lot_id,
+        pm.{{ columns.parent_lot_id }} AS parent_lot_id,
+        ROW_NUMBER() OVER (
+            PARTITION BY pm.{{ columns.product_id }}, pm.{{ columns.lot_id }}
+            ORDER BY pm.{{ columns.created_at }} ASC
+        ) AS rn
+    FROM {{ tables.snapshot_table }} pm
+    WHERE pm.{{ columns.parent_lot_id }} IS NOT NULL
+        {% if product_id %}
+        AND pm.{{ columns.product_id }} = {{ product_id|sql }}
+        {% endif %}
+),
+
+valid_parent_lots AS (
+    SELECT
+        product_id,
+        lot_id
+    FROM lot_parent_map
+    WHERE rn = 1
+      AND parent_lot_id = lot_id
+),
+
+lot_initial_wafers AS (
+    SELECT
+        iw.{{ columns.product_id }} AS product_id,
+        iw.{{ columns.lot_id }} AS lot_id,
+        iw.{{ columns.current_wafer_qty }} AS initial_wafer_count,
+        ROW_NUMBER() OVER (
+            PARTITION BY iw.{{ columns.product_id }}, iw.{{ columns.lot_id }}
+            ORDER BY iw.{{ columns.created_at }} ASC
+        ) AS rn
+    FROM {{ tables.snapshot_table }} iw
+    JOIN valid_parent_lots vpl
+        ON vpl.product_id = iw.{{ columns.product_id }}
+        AND vpl.lot_id = iw.{{ columns.lot_id }}
+    WHERE iw.{{ columns.current_wafer_qty }} IS NOT NULL
+        {% if product_id %}
+        AND iw.{{ columns.product_id }} = {{ product_id|sql }}
+        {% endif %}
+),
+
+lot_last_snapshot AS (
+    SELECT
+        llsrc.{{ columns.product_id }} AS product_id,
+        llsrc.{{ columns.lot_id }} AS lot_id,
+        MAX(llsrc.{{ columns.snapshot_cut }}) AS last_seen_snapshot
+    FROM {{ tables.lot_progress_table }} llsrc
+    JOIN valid_parent_lots vpl
+        ON vpl.product_id = llsrc.{{ columns.product_id }}
+        AND vpl.lot_id = llsrc.{{ columns.lot_id }}
+    WHERE 1=1
+        {% if product_id %}
+        AND llsrc.{{ columns.product_id }} = {{ product_id|sql }}
+        {% endif %}
+    GROUP BY llsrc.{{ columns.product_id }}, llsrc.{{ columns.lot_id }}
+),
+
+unified_lot_data AS (
+    -- Part A: lots in production
+    SELECT
+        l.{{ columns.snapshot_cut }} AS analysis_snapshot,
+        l.{{ columns.product_id }} AS product_id,
+        l.{{ columns.lot_id }} AS lot_id,
+        l.{{ columns.stage_name }} AS stage_name,
+        l.{{ columns.stage_time }} AS stage_time
+    FROM {{ tables.lot_progress_table }} AS l
+    JOIN valid_parent_lots vpl
+        ON vpl.product_id = l.{{ columns.product_id }}
+        AND vpl.lot_id = l.{{ columns.lot_id }}
+    WHERE 1=1
+        {% if product_id %}
+        AND l.{{ columns.product_id }} = {{ product_id|sql }}
+        {% endif %}
+        {% if snapshot_start %}
+        AND l.{{ columns.snapshot_cut }} >= {{ snapshot_start|sql }}
+        {% endif %}
+        {% if snapshot_end %}
+        AND l.{{ columns.snapshot_cut }} <= {{ snapshot_end|sql }}
+        {% endif %}
+
+    UNION ALL
+
+    -- Part B: lots that have finished
+    SELECT
+        s.analysis_snapshot,
+        l.{{ columns.product_id }} AS product_id,
+        l.lot_id,
+        l.stage_name,
+        l.stage_time
+    FROM all_analysis_snapshots s
+    JOIN lot_last_snapshot lls
+        ON lls.last_seen_snapshot < s.analysis_snapshot
+    JOIN {{ tables.lot_progress_table }} l
+        ON l.{{ columns.product_id }} = lls.product_id
+        AND l.lot_id = lls.lot_id
+        AND l.{{ columns.snapshot_cut }} = lls.last_seen_snapshot
+    WHERE 1=1
+        {% if product_id %}
+        AND l.{{ columns.product_id }} = {{ product_id|sql }}
+        {% endif %}
+),
+
+lot_stage_with_end_time AS (
+    SELECT
+        analysis_snapshot,
+        product_id,
+        lot_id,
+        stage_name,
+        stage_time AS start_time,
+        LEAD(stage_time) OVER (
+            PARTITION BY analysis_snapshot, product_id, lot_id
+            ORDER BY stage_time
+        ) AS end_time
+    FROM unified_lot_data
+)
+
+SELECT 
+    d.calendar_time::date AS calendar_time,
+    l.analysis_snapshot AS snapshot_cut,
+    l.stage_name,
+    COUNT(DISTINCT (l.product_id, l.lot_id)) as lot_count,
+    COALESCE(SUM(COALESCE(w.initial_wafer_count, 0)), 0) AS wafer_count
+FROM lot_stage_with_end_time l
+LEFT JOIN lot_initial_wafers w
+    ON w.product_id = l.product_id
+    AND w.lot_id = l.lot_id
+    AND w.rn = 1
+JOIN LATERAL generate_series(
+    l.start_time::date,
+    COALESCE(l.end_time, l.start_time + interval '1 hour'),
+    '1 day'::interval
+) AS d(calendar_time) ON l.start_time IS NOT NULL
+GROUP BY calendar_time, analysis_snapshot, stage_name
+ORDER BY calendar_time, analysis_snapshot;

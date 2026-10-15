@@ -1,0 +1,11 @@
+{# Template for bulk inserting CSV data into the raw table #}
+INSERT INTO {{ tables.raw_table }} (
+    {%- for col in table_cols %}
+    {{ col }}{% if not loop.last %}, {% endif %}
+    {%- endfor %}
+)
+VALUES (
+    {%- for col in table_cols %}
+    %s{% if not loop.last %}, {% endif %}
+    {%- endfor %}
+)

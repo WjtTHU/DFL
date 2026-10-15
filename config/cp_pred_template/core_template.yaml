@@ -1,0 +1,42 @@
+dataset:
+  type: "lotwise" # 'fabwise' or 'lotwise'
+  params: # parameters of corresponding dataset
+    window_days: 7
+    step_days: 1
+    # random_sampling: true
+    # random_sample_num: 70
+
+target_scaler:
+  min: null
+  max: null
+
+embed:
+  numeric_feat_cols: []
+  categorical_feat_cols: # add categorical features with following information: `name` (column name), `encoder` ('embed' / 'onehot'), `dim` (you can specify the embedding dimension when encoder=='embed')
+    - name: "product_id"
+      encoder: "embed"
+      dim: 4
+    - name: "stage"
+      encoder: "embed"
+      dim: 8
+    - name: "lot_status"
+      encoder: "embed"
+      dim: 2
+  temporal_feat_cols: ["year", "month", "day", "weekday", "hour"] # options: any subset of ['year', 'month', 'day', 'weekday', `hour`, `minute`]
+  temporal_embed_dim: 20
+  position_col: "created_at" # column of timestamp
+  pos_enc: null # options: 't2v', 'abs', 'fixed' or null
+  use_given_emb: false # true / false
+
+model:
+  type: "tsf" # 'tsf', 'setseq', 'lstm', 'gru' or 'rnn'
+  params: # parameters of corresponding model
+    d_phi: 32
+    d_summary: 16
+    d_model: 128
+    n_head: 8
+    n_layers: 2
+    d_ff: 256
+    dropout: 0.2
+    agg: "last"
+    norm: "LayerNorm" # LayerNorm or BatchNorm

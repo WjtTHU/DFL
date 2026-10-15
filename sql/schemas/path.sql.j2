@@ -1,0 +1,36 @@
+{# Product path cache table schema template #}
+CREATE TABLE IF NOT EXISTS {{ tables.path_table }} (
+    {{ columns.path_id }} BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
+    {{ columns.product_id }} VARCHAR(255) NOT NULL,
+    {{ columns.path }} TEXT[] NOT NULL,
+    {{ columns.lot_count }} INTEGER NOT NULL,
+    {{ columns.wafer_qty }} INTEGER NOT NULL,
+    {{ columns.time_stats }} JSONB NOT NULL,
+    {{ columns.is_primary_path }} BOOLEAN NOT NULL,
+    {{ columns.clustering_method }} VARCHAR(255) NOT NULL,
+    {{ columns.clustering_params }} JSONB NOT NULL,
+    {{ columns.start_time }} TIMESTAMP NOT NULL,
+    {{ columns.end_time }} TIMESTAMP NOT NULL,
+    {{ columns.calculation_time }} TIMESTAMP DEFAULT NOW(),
+    PRIMARY KEY ({{ columns.path_id }})
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uidx_{{ tables.path_table }}_path_key
+    ON {{ tables.path_table }} (
+        {{ columns.product_id }},
+        hash_array_extended({{ columns.path }}, 0),
+        hash_array_extended({{ columns.path }}, 1),
+        cardinality({{ columns.path }}),
+        {{ columns.start_time }},
+        {{ columns.end_time }},
+        {{ columns.clustering_method }},
+        {{ columns.clustering_params }},
+        {{ columns.is_primary_path }}
+    );
+
+CREATE INDEX IF NOT EXISTS idx_{{ tables.path_table }}_product_time
+    ON {{ tables.path_table }} (
+        {{ columns.product_id }},
+        {{ columns.start_time }},
+        {{ columns.end_time }}
+    );

@@ -1,0 +1,22 @@
+{# Template for upserting lot completion prediction cache rows #}
+INSERT INTO {{ tables.lot_completion_predictions_table }} (
+    {{ columns.lot_id }},
+    {{ columns.snapshot_cut }},
+    {{ columns.product_id }},
+    {{ columns.prediction_split_time }},
+    {{ columns.remaining_days }},
+    {{ columns.predicted_completion_time }},
+    {{ columns.model_dir }}
+)
+VALUES (%s, %s, %s, %s, %s, %s, %s)
+ON CONFLICT (
+    {{ columns.lot_id }},
+    {{ columns.snapshot_cut }}
+)
+DO UPDATE SET
+    {{ columns.product_id }} = EXCLUDED.{{ columns.product_id }},
+    {{ columns.prediction_split_time }} = EXCLUDED.{{ columns.prediction_split_time }},
+    {{ columns.remaining_days }} = EXCLUDED.{{ columns.remaining_days }},
+    {{ columns.predicted_completion_time }} = EXCLUDED.{{ columns.predicted_completion_time }},
+    {{ columns.model_dir }} = EXCLUDED.{{ columns.model_dir }},
+    {{ columns.last_updated_at }} = NOW()

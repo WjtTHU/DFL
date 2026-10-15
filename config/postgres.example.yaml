@@ -1,0 +1,8 @@
+# Only required for the optional PostgreSQL/API workflow.
+# Copy to postgres.yaml and supply local connection details; postgres.yaml is ignored by Git.
+database:
+  host: "127.0.0.1"
+  port: 5432
+  dbname: "wip"
+  user: "postgres"
+  password: "CHANGE_ME"

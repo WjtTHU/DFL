@@ -1,0 +1,42 @@
+{# Lot snapshot data query template #}
+SELECT
+    {{ columns.lot_id }} AS lot_id,
+    {{ columns.lot_status }} AS lot_status,
+    {{ columns.product_id }} AS product_id,
+    {{ columns.created_at }} AS created_at,
+    {{ columns.parent_lot_id}} AS parent_lot_id,
+    {{ columns.current_wafer_qty }} AS current_wafer_qty,
+    {{ columns.wafer_start_date }} AS wafer_start_date,
+    {{ columns.stage }} AS stage
+{% for col in extra_feat_cols | default([]) %}
+    , {{ columns[col] }} AS {{ col }}
+{% endfor %}
+
+FROM {{ tables.snapshot_table }}
+WHERE
+    {{ columns.stage }} IS NOT NULL
+
+    {% if lot_id %}
+    AND {{ columns.lot_id }} = {{ lot_id|sql }}
+    {% endif %}
+
+    {% if product_ids %}
+    AND {{ columns.product_id }} IN {{ product_ids|sql }}
+    {% endif %}
+
+    {% if include_parent_filter %}
+    AND {{ columns.lot_id }} = {{ columns.parent_lot_id }}
+    {% endif %}
+
+    {% if snapshot_start %}
+    AND {{ columns.created_at }} >= {{ snapshot_start|sql }}
+    {% endif %}
+
+    {% if snapshot_cut %}
+    AND {{ columns.created_at }} <= {{ snapshot_cut|sql }}
+    {% endif %}
+ORDER BY
+    {{ columns.product_id }} ASC,
+    {{ columns.lot_id }} ASC,
+    {{ columns.parent_lot_id }} ASC,
+    {{ columns.created_at }} ASC

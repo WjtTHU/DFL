@@ -1,0 +1,19 @@
+dataset:
+  extra_params:
+    noise_cols: ['Stage']   # only categorical features like Stage and Lot Status are supported
+    noise_ratio: 0.2
+
+pretraining:
+  epochs: 100
+
+optimizer:
+  type: "AdamW"
+  params:
+    lr: 0.0003
+    weight_decay: 0.01
+
+scheduler:
+  type: "CosineAnnealingLR"
+  warmup_epoch: 10
+  params:
+    T_max: 90

@@ -1,0 +1,19 @@
+{# Distinct lot IDs from snapshot_table for a scope #}
+SELECT DISTINCT
+    s.{{ columns.lot_id }} AS lot_id
+FROM {{ tables.snapshot_table }} s
+WHERE 1=1
+    AND s.{{ columns.lot_id }} = s.{{ columns.parent_lot_id }}
+    {% if product_id %}
+    AND s.{{ columns.product_id }} = {{ product_id|sql }}
+    {% endif %}
+    {% if lot_id %}
+    AND s.{{ columns.lot_id }} = {{ lot_id|sql }}
+    {% endif %}
+    {% if snapshot_start %}
+    AND s.{{ columns.created_at }} >= {{ snapshot_start|sql }}
+    {% endif %}
+    {% if snapshot_end %}
+    AND s.{{ columns.created_at }} <= {{ snapshot_end|sql }}
+    {% endif %}
+ORDER BY lot_id

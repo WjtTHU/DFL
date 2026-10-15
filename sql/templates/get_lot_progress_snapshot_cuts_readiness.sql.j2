@@ -1,0 +1,24 @@
+WITH required_cuts AS (
+  SELECT *
+  FROM (VALUES
+    {% for row in snapshot_cuts %}
+    ({{ row.lot_id|sql }}::varchar, {{ row.snapshot_cut|sql }}::timestamp){% if not loop.last %},{% endif %}
+    {% endfor %}
+  ) AS v(lot_id, snapshot_cut)
+),
+ready_progress AS (
+  SELECT DISTINCT
+    lp.{{ columns.lot_id }} AS lot_id,
+    lp.{{ columns.snapshot_cut }} AS snapshot_cut
+  FROM {{ tables.lot_progress_table }} lp
+  WHERE lp.{{ columns.product_id }} = {{ product_id|sql }}
+)
+SELECT
+  rc.lot_id,
+  rc.snapshot_cut,
+  (rp.lot_id IS NOT NULL) AS is_ready
+FROM required_cuts rc
+LEFT JOIN ready_progress rp
+  ON rp.lot_id = rc.lot_id
+ AND rp.snapshot_cut = rc.snapshot_cut
+ORDER BY rc.lot_id, rc.snapshot_cut

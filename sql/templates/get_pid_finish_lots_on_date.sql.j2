@@ -1,0 +1,26 @@
+{# Lots of a product whose cached model-predicted completion falls on target_date.
+   Uses each lot's latest raw snapshot before the end of target_date, then joins
+   the completion prediction cache at that exact lot+snapshot cut.
+#}
+WITH latest_cut AS (
+  SELECT
+    s.{{ columns.lot_id }} AS lot_id,
+    MAX(s.{{ columns.created_at }}) AS snapshot_cut
+  FROM {{ tables.snapshot_table }} s
+  WHERE s.{{ columns.product_id }} = {{ product_id|sql }}
+    AND s.{{ columns.stage }} IS NOT NULL
+    AND s.{{ columns.lot_id }} = s.{{ columns.parent_lot_id }}
+    AND s.{{ columns.created_at }} < ({{ target_date|sql }}::date + interval '1 day')
+  GROUP BY s.{{ columns.lot_id }}
+)
+SELECT
+  p.{{ columns.lot_id }} AS lot_id,
+  p.{{ columns.predicted_completion_time }} AS finish_time
+FROM {{ tables.lot_completion_predictions_table }} p
+JOIN latest_cut lc
+  ON p.{{ columns.lot_id }} = lc.lot_id
+ AND p.{{ columns.snapshot_cut }} = lc.snapshot_cut
+WHERE p.{{ columns.product_id }} = {{ product_id|sql }}
+  AND p.{{ columns.predicted_completion_time }} >= {{ target_date|sql }}::date
+  AND p.{{ columns.predicted_completion_time }} < ({{ target_date|sql }}::date + interval '1 day')
+ORDER BY p.{{ columns.lot_id }}
