@@ -118,6 +118,24 @@ def main(argv=None) -> int:
     prediction.add_argument("--checkpoint", required=True, help="Absolute path or path relative to local_wip.")
     prediction.add_argument("--at", required=True, help="Prediction cutoff, e.g. 2026-06-01 06:58:26.")
     prediction.add_argument("--lot", action="append", required=True, help="Lot ID; repeat for multiple lots.")
+    for action in ('prepare', 'train', 'evaluate', 'predict'):
+        daily = sub.add_parser(f'daily-{action}', help=f'{action.title()} with the daily DK research protocol.')
+        daily.add_argument('--dataset', choices=['dk'], default='dk')
+        daily.add_argument('--output', help='New output directory; an existing directory is never overwritten.')
+        if action in ('prepare', 'train'):
+            daily.add_argument('--protocol', default='config/daily_dk.yaml')
+            daily.add_argument('--smoke', action='store_true', help='Small deterministic sample; training runs one epoch.')
+        if action == 'train':
+            daily.add_argument('--mode', choices=['point', 'distribution', 'both'], default='both')
+            daily.add_argument('--epochs', type=int)
+        if action in ('evaluate', 'predict'):
+            daily.add_argument('--checkpoint', required=True)
+        if action == 'evaluate':
+            daily.add_argument('--split', choices=['validation', 'test'], default='test')
+        if action == 'predict':
+            daily.add_argument('--at', required=True, help='Local calendar date YYYY-MM-DD, evaluated at day end.')
+            daily.add_argument('--lot', action='append', required=True, help='Known unfinished root Lot; repeat as needed.')
+            daily.add_argument('--completed-lot', action='append', default=[], help='Exclude a Lot already known completed.')
     args = parser.parse_args(argv)
 
     datasets = (args.dataset,) if args.dataset else DATASETS
@@ -135,6 +153,9 @@ def main(argv=None) -> int:
     if missing:
         parser.error("This Python environment is missing dependencies: " + ", ".join(missing))
     configure_imports()
+    if args.command.startswith('daily-'):
+        from wip_pred.daily.runner import main as daily_main
+        return daily_main(args)
     if args.command == "train":
         run_training(args)
     else:

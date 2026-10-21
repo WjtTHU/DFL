@@ -1,0 +1,13 @@
+experiment_version: app_pto_v1
+dataset_dir: outputs/app/dk_3x3_v1_20261019
+split: test
+point_checkpoint: outputs/dk/daily/full_runs/20261017_1908_pto_split/training/point
+training_sample_index: outputs/dk/daily/full_runs/20261017_1908_pto_split/training/sample_index.csv
+solver_config: config/app_solver.yaml
+methods: [point_transformer, historical_product_cycle]
+solver_threads: 1
+solver_time_limit_seconds: 120
+feasibility_tolerance: 0.00001
+point_date_rule: ceil_days_from_previous_day_clamp_arrival_to_current_period
+baseline_rule: training_unique_lot_mean_total_calendar_cycle_minus_elapsed_clip_zero
+# No fitting, parameter selection or demand adjustment on this test trajectory.

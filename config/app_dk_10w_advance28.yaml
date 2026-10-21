@@ -1,0 +1,85 @@
+# New test pilot; ratios unchanged, scale fitted only before 2024-12-10.
+schema_version: app_dataset_v1
+dataset_id: dk_app_3x3_10w_advance28_v2
+source_csv: ../数据和字段映射关系/数据和字段映射关系/DK数据/combined_DK_wip_root_cleaned_with_FG.csv
+expected_source_sha256: 08dfe9be49adf046c187b8db0b35bfc59d58f6bea494007b022b103fe6d81fe7
+supplier_id: DK_dataset
+supplier_id_origin: dataset_namespace_not_enterprise_supplier_identifier
+timezone: Asia/Shanghai
+period_days: 7
+planning_periods: 4
+history_window_days: 15
+completion_margin_days: 3
+quantity_column: dieQty
+quantity_unit: die
+left_boundary_policy: exclude_and_record_incomplete_history
+unknown_right_boundary_policy: retain_orders_and_mark_outcome_unknown
+splits:
+  train:
+    start: '2024-10-01'
+    end_exclusive: '2024-12-10'
+    rng_stream: 0
+  validation:
+    start: '2024-12-10'
+    end_exclusive: '2025-01-07'
+    rng_stream: 1
+  test:
+    start: '2025-01-07'
+    end_exclusive: '2025-02-25'
+    rng_stream: 2
+calibration:
+  start: '2024-10-08'
+  end_exclusive: '2024-12-03'
+  label_cutoff_exclusive: '2024-12-10'
+  material_consumption_to_supply: 0.9
+materials:
+- material_id: A
+  woItem: SWwgtywSc1cjbLJKzgHGaQ==
+- material_id: B
+  woItem: fR6aeuxeF6ltIrkbvsHj4g==
+- material_id: C
+  woItem: SvWXgOV4YFljxMjJv+B9kA==
+products:
+- P1
+- P2
+- P3
+bom:
+- - 1
+  - 0
+  - 1
+- - 1
+  - 1
+  - 0
+- - 0
+  - 1
+  - 1
+demand:
+  multiplier_low: 0.8
+  multiplier_high: 1.2
+  visibility: full_planning_window
+  unit: product_unit
+capacity:
+  target_mean_utilization: 0.85
+  resource_per_product_unit: 1.0
+secondary:
+  effective_lead_periods: 1
+  capacity_to_mean_material_consumption: 0.3
+costs:
+  production_per_product_unit: 0.2
+  finished_holding_per_product_unit_period: 0.05
+  backlog_per_product_unit_period: 2.0
+  secondary_purchase_per_die: 1.0
+  raw_holding_per_die_period: 0.0
+  terminal_backlog_extra_periods: 2
+  secondary_cost_evaluation: charge_on_receipt
+  secondary_cost_planning: charge_all_new_orders_arriving_in_horizon
+  terminal_inventory_salvage: 0.0
+initial_state:
+  raw_stock_mean_consumption_periods: 1.0
+  finished_stock: 0.0
+  backlog: 0.0
+  secondary_pipeline: empty
+seed: 42
+order_information_policy: config/app_order_information_28d.yaml
+advance_order_splits:
+- test

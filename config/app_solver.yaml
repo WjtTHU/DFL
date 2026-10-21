@@ -1,0 +1,8 @@
+# Local solver selection; separate from the frozen APP dataset configuration.
+solver: cplex
+interface: interactive_cli
+executable: 'D:/Cplex/CPLEX_Studio128/cplex/bin/x64_win64/cplex.exe'
+verified_version: '12.8.0.0'
+model_format: lp
+solution_format: sol_xml
+require_optimal_status: true

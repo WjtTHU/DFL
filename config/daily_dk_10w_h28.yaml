@@ -1,0 +1,19 @@
+# Independent authorized protocol. Existing protocols/checkpoints remain unchanged.
+protocol_version: daily_v1
+dataset: dk
+timezone: Asia/Shanghai
+forecast_start: null
+forecast_end_exclusive: '2025-02-25'  # Seven APP test weeks, Jan 7 through Feb 24.
+forecast_every_days: 1
+train_end: '2024-12-10'
+validation_end: '2025-01-07'
+window_days: 15
+completion_margin_days: 3
+distribution_horizon_quantile: 0.95  # Legacy fallback only; fixed range below takes precedence.
+distribution_horizon_days: 28  # Days 1..28, plus a distinct open-ended >28 class.
+seed: 42
+batch_size: 128
+epochs: 80
+patience: 30
+threads: 4
+# Later observations confirm test labels only; they are not forecast features.

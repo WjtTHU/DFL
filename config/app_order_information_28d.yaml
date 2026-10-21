@@ -1,0 +1,21 @@
+# Shared experimental order-information assumption, not a real enterprise order feed.
+schema_version: app_order_information_v1
+timezone: Asia/Shanghai
+advance_notice_days: 28
+planned_entry_rule: first_snapshot_calendar_date_proxy
+announcement_rule: planned_entry_minus_advance_notice_days
+quantity_rule: first_snapshot_dieQty_fixed
+quantity_unit: die
+promise_rule: planned_entry_plus_ceil_training_unique_lot_product_mean_calendar_cycle
+unseen_product_rule: training_unique_lot_global_mean_calendar_cycle
+training_label_cutoff: '2024-12-10'
+forecast_end_exclusive: '2025-02-25'
+period_days: 7
+planning_periods: 4
+test_start: '2025-01-07'
+test_end_exclusive: '2025-02-25'
+planning_extension_end_exclusive: '2025-03-18'
+after_first_snapshot: update_with_snapshot_predictor
+overdue_order_rule: remain_pending_until_known_completed
+true_completion_in_planning_inputs: false
+# This policy neither changes Transformer inputs nor generates APP demands/costs.

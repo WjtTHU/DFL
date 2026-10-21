@@ -1,0 +1,17 @@
+experiment_version: app_perfect_observed_diagnostic_v1
+dataset_dir: outputs/app/dk_3x3_10w_advance28_20261020
+reference_run: outputs/app/pto_runs/20261021_nll_expected_v1
+solver_config: config/app_solver.yaml
+split: test
+method: perfect_observed_diagnostic
+observed_order_rule: enterprise_completion_label_as_exact_calendar_remaining_days
+unobserved_order_rule: unchanged_synthetic_promise
+unknown_observed_completion_rule: fail_without_dropping_or_filling
+planning_periods: 4
+solver_threads: 1
+solver_time_limit_seconds: 120
+feasibility_tolerance: 1.0e-05
+diagnostic_only: true
+deployable: false
+new_predictor_training: false
+test_parameter_tuning: false

@@ -1,0 +1,15 @@
+experiment_version: app_pto_advance28_v2
+dataset_dir: outputs/app/dk_3x3_10w_advance28_20261020
+split: test
+point_checkpoint: outputs/dk/daily/full_runs/20261020_train10w_h28/training/point
+training_sample_index: outputs/dk/daily/full_runs/20261020_train10w_h28/training/sample_index.csv
+solver_config: config/app_solver.yaml
+methods:
+- point_transformer
+- historical_product_cycle
+solver_threads: 1
+solver_time_limit_seconds: 120
+feasibility_tolerance: 1.0e-05
+point_date_rule: ceil_days_from_previous_day_clamp_arrival_to_current_period
+baseline_rule: training_unique_lot_mean_total_calendar_cycle_minus_elapsed_clip_zero
+order_policy: config/app_order_information_28d.yaml

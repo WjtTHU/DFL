@@ -1,0 +1,15 @@
+experiment_version: app_nll_expected_supply_v1
+dataset_dir: outputs/app/dk_3x3_10w_advance28_20261020
+reference_run: outputs/app/pto_runs/20261020_point_advance28_v2
+distribution_checkpoint: outputs/dk/daily/full_runs/20261020_train10w_h28/training/distribution
+solver_config: config/app_solver.yaml
+split: test
+method: nll_expected_supply
+probability_rule: sum_daily_probability_into_week_then_multiply_fixed_quantity
+tail_rule: keep_beyond_28_day_planning_horizon_no_renormalization
+unobserved_order_rule: shared_synthetic_promise
+solver_threads: 1
+solver_time_limit_seconds: 120
+feasibility_tolerance: 1.0e-05
+new_predictor_training: false
+test_parameter_tuning: false
